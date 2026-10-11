@@ -1,0 +1,27 @@
+{
+  "title": "grantgate — consent-click gate for Google OAuth grants",
+  "repoName": "grantgate",
+  "oneLiner": "For owners of 5–50 person Google Workspace businesses with no IT staff, it intercepts \"Sign in with Google\" consent prompts, blocks risky scope grants and keeps a local encrypted ledger, for a flat few dollars a month instead of enterprise tools that start at $750/month.",
+  "overlaps": "none (closest in the portfolio is google-travel-journal-api, an archived Google OAuth demo, not a security product)",
+  "tags": [
+    "security",
+    "browser-extension"
+  ],
+  "effort": "Low",
+  "confidence": "Low",
+  "sources": [
+    "https://nudgesecurity.com/pricing",
+    "https://redcanary.com/blog/threat-detection/google-workspace-oauth-attack/",
+    "https://www.bleepingcomputer.com/news/security/salesloft-breached-to-steal-oauth-tokens-for-salesforce-data-theft-attacks",
+    "https://support.google.com/a/answer/60757",
+    "https://www.valencesecurity.com/resources/blogs/saas-oauth-attack-leads-to-widespread-browser-extension-breach",
+    "https://securityboulevard.com/2025/01/consent-phishing-the-new-smarter-way-to-phish/",
+    "https://securityaffairs.com/181686/cyber-crime/google-salesloft-drift-breach-hits-all-integrations.html",
+    "https://www.securityweek.com/several-infostealers-use-persistent-cookies-to-hijack-google-accounts/",
+    "https://dupple.com/compare/passpack-vs-1password",
+    "https://auth0.com/blog/auth0-token-vault-secure-token-exchange-for-ai-agents/"
+  ],
+  "seedId": "seed-57d8c6",
+  "slug": "grantgate",
+  "recordedAt": "2026-10-11T19:12:17.573Z"
+}
