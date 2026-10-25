@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "grantgate",
+  "description": "Stops risky \"Sign in with Google\" grants until you confirm them, and keeps an encrypted record of every sign-in.",
+  "minimum_chrome_version": "116",
+  "permissions": ["declarativeNetRequest", "storage"],
+  "host_permissions": ["https://accounts.google.com/*", "http://accounts.google.com/*"],
+  "background": {
+    "service_worker": "js/extension/background.js",
+    "type": "module"
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["interstitial.html"],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; frame-ancestors 'none'"
+  }
+}

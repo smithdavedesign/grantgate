@@ -1,0 +1,26 @@
+{
+  "name": "grantgate",
+  "version": "0.4.0",
+  "private": true,
+  "description": "Consent-click gate for Google OAuth grants: a Chrome MV3 extension that stops risky scope grants until you confirm them, keeps an allowlist and denylist of apps (shareable as a policy file), and records every sign-in in a passphrase-encrypted local ledger exportable as CSV. Plus its landing page, waitlist and founding-plan checkout, deployed on Vercel.",
+  "type": "module",
+  "engines": {
+    "node": "^22.18 || >=23.6"
+  },
+  "scripts": {
+    "test": "node --test --disable-warning=ExperimentalWarning \"test/**/*.test.ts\"",
+    "build": "node --disable-warning=ExperimentalWarning scripts/build.ts",
+    "build:site": "node --disable-warning=ExperimentalWarning scripts/build-site.ts",
+    "site": "node --disable-warning=ExperimentalWarning scripts/serve-site.ts",
+    "screenshots": "node --disable-warning=ExperimentalWarning scripts/screenshots.mjs",
+    "typecheck": "tsc -p ."
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "playwright-core": "^1.64.1",
+    "typescript": "^7.0.2"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^1.2.0"
+  }
+}

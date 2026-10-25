@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>grantgate settings</title>
+  <style>
+    :root { color-scheme: light dark; font-family: system-ui, sans-serif; line-height: 1.45; }
+    body { margin: 0; padding: 2rem 1rem; }
+    main { max-width: 56rem; margin: 0 auto; }
+    h1 { font-size: 1.5rem; margin: 0 0 0.5rem; }
+    h2 { font-size: 1.2rem; margin: 2rem 0 0.5rem; }
+    h3 { font-size: 1rem; margin: 1rem 0 0.25rem; }
+    section { border-top: 1px solid color-mix(in srgb, currentColor 20%, transparent); }
+    form { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: end; margin: 0.75rem 0; }
+    label { display: inline-flex; flex-direction: column; gap: 0.25rem; font-weight: 600; }
+    input[type=password] { font: inherit; padding: 0.4rem 0.5rem; min-width: 14rem; }
+    button { font: inherit; padding: 0.5rem 0.9rem; border-radius: 0.4rem; border: 1px solid currentColor; background: transparent; color: inherit; cursor: pointer; }
+    button[type=submit] { background: #1a73e8; border-color: #1a73e8; color: #fff; }
+    button:disabled, input:disabled { opacity: 0.5; cursor: progress; }
+    .actions { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; margin: 0.75rem 0; }
+    .note { font-size: 0.9rem; opacity: 0.8; }
+    .notice { min-height: 1.45em; }
+    .error, .warning { color: #c5221f; }
+    table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
+    th, td { text-align: left; vertical-align: top; padding: 0.35rem 0.5rem; border-bottom: 1px solid color-mix(in srgb, currentColor 15%, transparent); }
+    td.app, code { font-family: ui-monospace, monospace; overflow-wrap: anywhere; }
+    .rating-high .badge { color: #c5221f; font-weight: 700; }
+    .rating-medium .badge { color: #b06000; }
+    .rating-low .badge { color: #137333; }
+    ul.apps { padding-left: 1.25rem; }
+    ul.apps li { margin: 0.3rem 0; }
+  </style>
+  <script type="module" src="js/extension/options.js"></script>
+</head>
+<body>
+  <main id="app" aria-live="polite"><p>Loading…</p></main>
+</body>
+</html>

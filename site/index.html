@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>grantgate — stop risky “Sign in with Google” grants</title>
+  <meta name="description" content="grantgate is a browser extension that stops risky “Sign in with Google” grants until you've checked them, explains every permission in plain English, and keeps an encrypted record of every sign-in.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231a56db'/%3E%3Cpath d='M9 16.5l4.5 4.5L23 11' stroke='white' stroke-width='3.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/styles.css">
+  <script type="module" src="/page.js"></script>
+</head>
+<body>
+  <header class="site">
+    <div class="wrap">
+      <a class="logo" href="/">
+        <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#1a56db"/><path d="M9 16.5l4.5 4.5L23 11" stroke="#fff" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        grantgate
+      </a>
+      <nav class="site" aria-label="Main">
+        <a href="#how">How it works</a>
+        <a href="#risk">Risk levels</a>
+        <a href="#pricing">Pricing</a>
+        <a class="cta" href="#join">Join the waitlist</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="wrap">
+        <div>
+          <p class="eyebrow">For small businesses on Google Workspace</p>
+          <h1>Stop risky “Sign in with Google” grants before anyone clicks Allow.</h1>
+          <p class="lead">One click on Allow can hand an app you barely know your whole Gmail or Drive, and passwords and MFA won't stop it. grantgate checks every Google sign-in in your browser, explains what the app wants in plain English, and holds back the risky ones until you've decided.</p>
+          <div class="actions">
+            <a class="button primary" href="#join">Join the waitlist</a>
+            <a class="button" href="#pricing">See pricing</a>
+          </div>
+          <p class="fineprint">A Chrome extension in beta. Nothing leaves your browser.</p>
+        </div>
+
+        <figure class="mock" aria-label="What grantgate shows when it stops a sign-in">
+          <div class="bar" aria-hidden="true"><span></span><span></span><span></span></div>
+          <h2>Hold on: this app wants risky access to your Google account</h2>
+          <p class="app">pdf-magic.example · an app you haven't allowed</p>
+          <ul class="perms">
+            <li data-scope="https://mail.google.com/" data-rating="high"><span class="badge">High risk</span> read, send, delete and manage all your email</li>
+            <li data-scope="https://www.googleapis.com/auth/drive" data-rating="high"><span class="badge">High risk</span> see, edit, create and delete all your Google Drive files</li>
+            <li data-scope="email" data-rating="low"><span class="badge">Low risk</span> see your email address</li>
+          </ul>
+          <div class="mock-actions" aria-hidden="true">
+            <span class="mock-button primary">Go back</span>
+            <span class="mock-button">Continue just this once</span>
+          </div>
+          <figcaption>grantgate's check, shown before Google's own consent screen.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section id="why" class="band">
+      <div class="wrap">
+        <h2>Why passwords and MFA don't help</h2>
+        <p class="section-lead">Consent phishing doesn't steal a password. It asks Google, politely, to hand an app access to your account, and someone on your team says yes.</p>
+        <div class="grid-3">
+          <div class="card">
+            <h3>The consent screen is real</h3>
+            <p>It's Google's own page, so it looks exactly as it should. The only clue is a list of permissions that nobody reads.</p>
+          </div>
+          <div class="card">
+            <h3>Access outlives the click</h3>
+            <p>A grant keeps working until someone revokes it: weeks or months later, if anyone notices at all.</p>
+          </div>
+          <div class="card">
+            <h3>The free controls are hidden</h3>
+            <p>Google's app controls are admin-only and say nothing at the moment someone clicks. Enterprise tools start at $750/month.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="how">
+      <div class="wrap">
+        <h2>How it works</h2>
+        <p class="section-lead">grantgate sits in your browser, between the “Sign in with Google” button and Google's consent screen.</p>
+        <div class="grid-4">
+          <div class="card">
+            <span class="step-number">1</span>
+            <h3>Catches the sign-in</h3>
+            <p>It spots Google's sign-in request in your browser before it reaches Google.</p>
+          </div>
+          <div class="card">
+            <span class="step-number">2</span>
+            <h3>Explains it plainly</h3>
+            <p>Every permission the app asks for gets a plain-English label and a high, medium or low rating.</p>
+          </div>
+          <div class="card">
+            <span class="step-number">3</span>
+            <h3>Holds back the risky ones</h3>
+            <p>High-risk requests wait until you confirm, unless the app is on your allow list. Apps you block never get through.</p>
+          </div>
+          <div class="card">
+            <span class="step-number">4</span>
+            <h3>Keeps a private record</h3>
+            <p>Every sign-in goes into an encrypted ledger that only your passphrase opens. Export it as CSV, and share your lists with staff as a policy file.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="risk" class="band">
+      <div class="wrap">
+        <h2>Three risk levels, in plain English</h2>
+        <p class="section-lead">grantgate rates each permission an app asks for. Here are some it knows, in its own words: “This app wants to…”</p>
+        <div class="grid-3">
+          <article class="card level level-high" data-rating="high">
+            <h3>High risk</h3>
+            <p class="verdict" data-decision="block">Stopped until you confirm, or until your allow list says the app is OK.</p>
+            <ul>
+              <li data-scope="https://mail.google.com/">read, send, delete and manage all your email</li>
+              <li data-scope="https://www.googleapis.com/auth/drive">see, edit, create and delete all your Google Drive files</li>
+              <li data-scope="https://www.googleapis.com/auth/admin.directory.user">create, change and delete user accounts in your organization</li>
+            </ul>
+          </article>
+          <article class="card level level-medium" data-rating="medium">
+            <h3>Medium risk</h3>
+            <p class="verdict" data-decision="allow">Allowed, and written to your ledger so you can review it later.</p>
+            <ul>
+              <li data-scope="https://www.googleapis.com/auth/calendar">see, edit, share and permanently delete all your calendars</li>
+              <li data-scope="https://www.googleapis.com/auth/contacts.readonly">see and download your contacts</li>
+            </ul>
+          </article>
+          <article class="card level level-low" data-rating="low">
+            <h3>Low risk</h3>
+            <p class="verdict" data-decision="allow">Goes straight through: this is all an ordinary sign-in asks for.</p>
+            <ul>
+              <li data-scope="openid">confirm who you are when you sign in</li>
+              <li data-scope="email">see your email address</li>
+              <li data-scope="profile">see your name and profile picture</li>
+            </ul>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="private">
+      <div class="wrap narrow">
+        <h2>Private by design</h2>
+        <p class="section-lead">The extension has no server. Your record of sign-ins and your allow and block lists stay in your browser, and the record is encrypted with a passphrase only you know. grantgate never sees your Google account, your tokens or your email.</p>
+        <p><a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer">See which apps can already reach your Google account →</a></p>
+      </div>
+    </section>
+
+    <section id="pricing" class="band">
+      <div class="wrap">
+        <div class="pricing card">
+          <p class="eyebrow">Founding plan</p>
+          <p class="price-line"><span class="price">$5</span> <span class="per">/ month</span></p>
+          <p class="for">One flat price for your whole business, up to 50 people.</p>
+          <ul class="ticks">
+            <li>grantgate for everyone on your team</li>
+            <li>One shared allow and block list, as a policy file</li>
+            <li>A 15-minute setup call</li>
+            <li>Every update during the beta</li>
+          </ul>
+          <a class="button primary wide" href="/api/checkout">Pre-order for $5/month</a>
+          <p class="fineprint">Cancel any time. Full refund within 30 days of your first payment. See the <a href="/terms.html">terms</a>.</p>
+          <p class="fineprint">Not ready to pay? <a href="#join">Join the waitlist</a> for free.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="join" class="join">
+      <div class="wrap">
+        <div class="join-card">
+          <h2>Join the waitlist</h2>
+          <p class="section-lead">Be first to try grantgate, and help shape it. We'll only email you about grantgate.</p>
+          <p id="checkout-notice" class="notice-banner" role="status" hidden></p>
+          <form class="join-form" action="/api/waitlist" method="post" data-waitlist data-status="join-status">
+            <input type="hidden" name="action" value="join">
+            <div class="field">
+              <label for="join-email">Work email</label>
+              <input id="join-email" type="email" name="email" required maxlength="254" autocomplete="email">
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <label for="join-role">Which best describes you?</label>
+                <select id="join-role" name="role">
+                  <option value="">Choose one (optional)</option>
+                  <option value="owner">I own or run the business</option>
+                  <option value="office-manager">I'm the office manager or go-to admin</option>
+                  <option value="it-provider">I look after IT for other businesses</option>
+                  <option value="individual">I'm protecting my own Google account</option>
+                  <option value="other">Something else</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="join-team">Team size</label>
+                <select id="join-team" name="team_size">
+                  <option value="">Choose one (optional)</option>
+                  <option value="1">Just me</option>
+                  <option value="2-4">2–4 people</option>
+                  <option value="5-50">5–50 people</option>
+                  <option value="51+">More than 50</option>
+                </select>
+              </div>
+            </div>
+            <div class="check">
+              <input id="join-interview" type="checkbox" name="interview" value="yes">
+              <label for="join-interview">I'm happy to do a 15-minute call about how my team signs in with Google.</label>
+            </div>
+            <div class="hp" aria-hidden="true">
+              <label for="join-website">Leave this empty</label>
+              <input id="join-website" type="text" name="website" tabindex="-1" autocomplete="off">
+            </div>
+            <button class="button primary wide" type="submit">Join the waitlist</button>
+          </form>
+          <p id="join-status" class="form-status" role="status" aria-live="polite"></p>
+          <p class="fineprint">We keep your answers in our waitlist database and nowhere else. Read the <a href="/privacy.html">privacy policy</a>; you can remove yourself any time.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site">
+    <div class="wrap">
+      <p>grantgate — a consent-click gate for Google sign-ins.</p>
+      <nav aria-label="Footer">
+        <a href="/privacy.html">Privacy</a>
+        <a href="/terms.html">Terms</a>
+        <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer">Your Google permissions</a>
+      </nav>
+    </div>
+  </footer>
+</body>
+</html>
