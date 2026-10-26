@@ -139,6 +139,7 @@ footer.site nav { display: flex; flex-wrap: wrap; gap: 1.25rem; }
 .prose h2 { margin: 2.25rem 0 0.5rem; font-size: 1.3rem; }
 .prose .updated { margin-top: 0; color: var(--muted); }
 .prose li { margin: 0.35rem 0; }
+.prose code { padding: 0.1rem 0.35rem; font-size: 0.9em; background: #eef0f4; border-radius: 0.3rem; overflow-wrap: anywhere; }
 
 /* The reply to a form posted without JS */
 main.notice { max-width: 36rem; margin: 4rem auto; padding: 2rem; background: #fff; border: 1px solid var(--line); border-radius: 1rem; }

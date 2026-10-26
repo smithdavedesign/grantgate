@@ -6,7 +6,9 @@ import { createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { DRIVER_FILES, FUNCTION_ROUTES, NODE_RUNTIME, SITE_STATIC_FILES, buildSite } from '../scripts/build-site.ts';
+import { DRIVER_FILES, FUNCTION_ROUTES, GENERATED_FILES, NODE_RUNTIME, SITE_STATIC_FILES, buildSite } from '../scripts/build-site.ts';
+import { PUBLIC_PAGES, SHARE_IMAGE, buildConfig, pageRoutes, renderPage, robotsTxt, sitemapXml } from '../scripts/site-pages.ts';
+import { shareImagePng } from '../scripts/share-image.ts';
 import { API_ROUTES, CHECKOUT_FALLBACK, MESSAGES, SITE_HEADERS } from '../src/site/api.ts';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -34,7 +36,8 @@ describe('npm run build:site: the Vercel deploy (Build Output API v3)', () => {
     // Inside the repo (dist/ is git-ignored), never in a system temp directory.
     await mkdir(join(ROOT, 'dist'), { recursive: true });
     out = await mkdtemp(join(ROOT, 'dist', '.test-site-'));
-    await buildSite(out);
+    // An empty environment: what a build with nothing configured produces.
+    await buildSite(out, {});
   });
 
   after(async () => {
@@ -51,18 +54,79 @@ describe('npm run build:site: the Vercel deploy (Build Output API v3)', () => {
     assert.ok(pkg.dependencies['@neondatabase/serverless'], 'the driver is a runtime dependency, so npm ci installs it');
   });
 
-  it('writes a v3 config that puts the security headers on every response', async () => {
+  it('writes a v3 config that puts the security headers on every response, then the clean page URLs', async () => {
     const config = JSON.parse(await readFile(join(out, 'config.json'), 'utf8'));
     assert.equal(config.version, 3);
-    assert.deepEqual(config.routes, [{ src: '/(.*)', headers: { ...SITE_HEADERS }, continue: true }]);
+    assert.deepEqual(config.routes, [{ src: '/(.*)', headers: { ...SITE_HEADERS }, continue: true }, ...pageRoutes()]);
+    for (const route of pageRoutes()) {
+      if ('dest' in route) assert.ok(existsSync(join(out, 'static', route.dest.slice(1))), route.dest);
+    }
   });
 
-  it('copies every page and the stylesheet unchanged', async () => {
+  it('renders every page with its metadata, and copies the stylesheet unchanged', async () => {
     assert.deepEqual([...SITE_STATIC_FILES].sort(), ['index.html', 'privacy.html', 'styles.css', 'terms.html']);
     // A file added to site/ but not to SITE_STATIC_FILES would pass the link checks and 404 on Vercel.
     assert.deepEqual((await readdir(join(ROOT, 'site'))).sort(), [...SITE_STATIC_FILES].sort());
-    for (const file of SITE_STATIC_FILES) {
-      assert.equal(await readFile(join(out, 'static', file), 'utf8'), await readFile(join(ROOT, 'site', file), 'utf8'), file);
+    assert.deepEqual(PUBLIC_PAGES.map((p) => p.file).sort(), SITE_STATIC_FILES.filter((f) => f.endsWith('.html')).sort());
+    const config = buildConfig({});
+    for (const page of PUBLIC_PAGES) {
+      const built = await readFile(join(out, 'static', page.file), 'utf8');
+      assert.equal(built, renderPage(await readFile(join(ROOT, 'site', page.file), 'utf8'), page, config), page.file);
+      assert.ok(built.includes(`<title>${page.title}</title>`), page.file);
+      assert.doesNotMatch(built, /data-buy/, `${page.file}: no Buy button without STRIPE_PAYMENT_LINK`);
+      assert.match(built, /<meta name="vercel-env" content="development">/);
+    }
+    assert.equal(await readFile(join(out, 'static', 'styles.css'), 'utf8'), await readFile(join(ROOT, 'site', 'styles.css'), 'utf8'));
+  });
+
+  it('writes robots.txt, sitemap.xml and the share image', async () => {
+    const { origin } = buildConfig({});
+    assert.equal(await readFile(join(out, 'static', 'robots.txt'), 'utf8'), robotsTxt(origin));
+    assert.equal(await readFile(join(out, 'static', 'sitemap.xml'), 'utf8'), sitemapXml(origin));
+    const png = await readFile(join(out, 'static', SHARE_IMAGE.file));
+    assert.deepEqual(png, shareImagePng());
+    assert.equal(png.readUInt32BE(16), 1200);
+    assert.equal(png.readUInt32BE(20), 630);
+  });
+
+  it('bakes the payment link, the deployment and the production domain into the pages', async () => {
+    const paid = await mkdtemp(join(ROOT, 'dist', '.test-site-paid-'));
+    try {
+      await buildSite(paid, {
+        STRIPE_PAYMENT_LINK: 'https://example.com/pay',
+        VERCEL_ENV: 'production',
+        VERCEL_PROJECT_PRODUCTION_URL: 'grantgate.example',
+      });
+      const index = await readFile(join(paid, 'static', 'index.html'), 'utf8');
+      assert.match(index, /<a class="button primary wide" href="https:\/\/example\.com\/pay" data-buy>/);
+      assert.match(index, /<meta name="vercel-env" content="production">/);
+      assert.match(index, /<link rel="canonical" href="https:\/\/grantgate\.example\/">/);
+      assert.match(await readFile(join(paid, 'static', 'robots.txt'), 'utf8'), /^Sitemap: https:\/\/grantgate\.example\/sitemap\.xml$/m);
+      for (const file of ['privacy.html', 'terms.html']) {
+        assert.doesNotMatch(await readFile(join(paid, 'static', file), 'utf8'), /data-buy|example\.com\/pay/, file);
+      }
+    } finally {
+      await rm(paid, { recursive: true, force: true });
+    }
+  });
+
+  it('builds without a Buy button, and says so by name only, when STRIPE_PAYMENT_LINK is not https', async () => {
+    const bad = await mkdtemp(join(ROOT, 'dist', '.test-site-bad-'));
+    const logs: string[] = [];
+    const original = console.warn;
+    console.warn = (message: string) => logs.push(message);
+    try {
+      await buildSite(bad, { STRIPE_PAYMENT_LINK: 'http://example.com/pay' });
+    } finally {
+      console.warn = original;
+    }
+    try {
+      assert.doesNotMatch(await readFile(join(bad, 'static', 'index.html'), 'utf8'), /data-buy|example\.com\/pay/);
+      assert.equal(logs.length, 1);
+      assert.match(logs[0], /STRIPE_PAYMENT_LINK is not an https URL/);
+      assert.ok(!logs[0].includes('example.com'), 'the value is never logged');
+    } finally {
+      await rm(bad, { recursive: true, force: true });
     }
   });
 
@@ -70,10 +134,14 @@ describe('npm run build:site: the Vercel deploy (Build Output API v3)', () => {
     const page = await import(pathToFileURL(join(out, 'static', 'page.js')).href);
     assert.equal(typeof page.enhanceForm, 'function');
     assert.equal(typeof page.showCheckoutNotice, 'function');
+    assert.equal(typeof page.signalOnce, 'function');
+    assert.equal(typeof page.trackCheckout, 'function');
   });
 
-  it('ships only the pages, the stylesheet and the page script as static files', async () => {
-    assert.deepEqual((await filesUnder(join(out, 'static'))).sort(), [...SITE_STATIC_FILES, 'page.js'].sort());
+  it('ships only the pages, the stylesheet, the page script, robots.txt, the sitemap and the share image', async () => {
+    assert.deepEqual([...GENERATED_FILES].sort(), ['og.png', 'page.js', 'robots.txt', 'sitemap.xml']);
+    assert.equal(SHARE_IMAGE.file, 'og.png');
+    assert.deepEqual((await filesUnder(join(out, 'static'))).sort(), [...SITE_STATIC_FILES, ...GENERATED_FILES].sort());
   });
 
   it('makes one Node 22 function per API route', async () => {
@@ -136,7 +204,7 @@ describe('npm run build:site: the Vercel deploy (Build Output API v3)', () => {
     }
   });
 
-  it('emits an entry point that answers 503 without a database and sends pre-orders to CHECKOUT_URL', async () => {
+  it('emits an entry point that answers 503 without a database and sends /api/checkout to STRIPE_PAYMENT_LINK', async () => {
     for (const route of FUNCTION_ROUTES) {
       const entry = await import(pathToFileURL(fn(route, 'index.mjs')).href);
       assert.equal(typeof entry.default, 'function', route);
@@ -146,7 +214,7 @@ describe('npm run build:site: the Vercel deploy (Build Output API v3)', () => {
     const original = console.error;
     console.error = () => {};
     const bare = await serve(entry.create({}));
-    const paid = await serve(entry.create({ CHECKOUT_URL: 'https://pay.example/founding-plan' }));
+    const paid = await serve(entry.create({ STRIPE_PAYMENT_LINK: 'https://pay.example/founding-plan' }));
     try {
       const res = await fetch(`${bare.url}/api/waitlist`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{"email":"a@acme.example"}' });
       assert.equal(res.status, 503);

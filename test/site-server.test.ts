@@ -7,6 +7,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildSite } from '../scripts/build-site.ts';
 import { createSiteServer } from '../scripts/serve-site.ts';
+import { PUBLIC_PAGES } from '../scripts/site-pages.ts';
 import { CHECKOUT_FALLBACK, MESSAGES, SITE_HEADERS, escapeHtml } from '../src/site/api.ts';
 import { memoryStore } from '../src/site/waitlist.ts';
 
@@ -36,7 +37,7 @@ describe('npm run site: the local server', () => {
   before(async () => {
     await mkdir(join(ROOT, 'dist'), { recursive: true });
     out = await mkdtemp(join(ROOT, 'dist', '.test-serve-'));
-    await buildSite(out);
+    await buildSite(out, {});
     server = createSiteServer({ staticDir: join(out, 'static'), store, log: () => {} });
     await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
     base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
@@ -100,16 +101,40 @@ describe('npm run site: the local server', () => {
     const res = await fetch(`${base}/`);
     assert.match(res.headers.get('content-type') ?? '', /^text\/html; charset=utf-8$/);
     for (const [name, value] of Object.entries(SITE_HEADERS)) assert.equal(res.headers.get(name), value, name);
-    assert.equal(await res.text(), await readFile(join(ROOT, 'site', 'index.html'), 'utf8'));
+    assert.equal(await res.text(), await readFile(join(out, 'static', 'index.html'), 'utf8'));
+  });
+
+  it('renders every public page at its clean URL, with its title and one heading', async () => {
+    for (const page of PUBLIC_PAGES) {
+      const res = await fetch(`${base}${page.path}`, { redirect: 'manual' });
+      assert.equal(res.status, 200, page.path);
+      assert.match(res.headers.get('content-type') ?? '', /^text\/html; charset=utf-8$/, page.path);
+      assert.equal(res.headers.get('content-security-policy'), SITE_HEADERS['Content-Security-Policy'], page.path);
+      const html = await res.text();
+      assert.equal(html, await readFile(join(out, 'static', page.file), 'utf8'), page.path);
+      assert.ok(html.includes(`<title>${page.title}</title>`), page.path);
+      assert.equal([...html.matchAll(/<h1\b/g)].length, 1, page.path);
+    }
+  });
+
+  it('moves the old /privacy.html and /terms.html addresses to the clean URLs for good', async () => {
+    for (const [old, now] of [['/privacy.html', '/privacy'], ['/terms.html', '/terms']]) {
+      const res = await raw(base, old);
+      assert.equal(res.status, 308, old);
+      assert.equal(res.headers.location, now, old);
+    }
   });
 
   it('serves each file with its type', async () => {
     const types: Record<string, RegExp> = {
       '/index.html': /^text\/html/,
-      '/privacy.html': /^text\/html/,
-      '/terms.html': /^text\/html/,
+      '/privacy': /^text\/html/,
+      '/terms': /^text\/html/,
       '/styles.css': /^text\/css/,
       '/page.js': /^text\/javascript/,
+      '/robots.txt': /^text\/plain/,
+      '/sitemap.xml': /^application\/xml/,
+      '/og.png': /^image\/png$/,
     };
     for (const [path, type] of Object.entries(types)) {
       const res = await fetch(`${base}${path}`);
@@ -117,6 +142,13 @@ describe('npm run site: the local server', () => {
       assert.match(res.headers.get('content-type') ?? '', type, path);
       assert.equal(res.headers.get('x-content-type-options'), 'nosniff', path);
     }
+  });
+
+  it('serves robots.txt and sitemap.xml at the root, where crawlers look', async () => {
+    const robots = await (await fetch(`${base}/robots.txt`)).text();
+    assert.match(robots, /^Sitemap: https:\/\/grantgate\.vercel\.app\/sitemap\.xml$/m);
+    const sitemap = await (await fetch(`${base}/sitemap.xml`)).text();
+    assert.equal([...sitemap.matchAll(/<loc>/g)].length, PUBLIC_PAGES.length);
   });
 
   it('answers HEAD without a body', async () => {

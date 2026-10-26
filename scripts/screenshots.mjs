@@ -5,6 +5,10 @@
 // interstitial page is shown from the built extension, with a stand-in for the
 // chrome.runtime messaging that answers with the real assess() from policy.js.
 //
+// The site is built with a placeholder STRIPE_PAYMENT_LINK, so the Buy button shows,
+// and as a development build, so no visit is counted (Playwright's browser is also
+// navigator.webdriver, which page.js never counts).
+//
 // Chromium comes from CHROMIUM_PATH; this script never downloads a browser.
 // Sample data only: an invented app, an invented business, a .example address.
 // Not part of `npm test`.
@@ -24,6 +28,8 @@ const SITE = `http://127.0.0.1:${PORT}`;
 // Never resolved: Playwright answers every request to it from the built extension.
 const EXTENSION_ORIGIN = 'https://extension.grantgate.test';
 const START_TIMEOUT_MS = 30_000;
+// Not a real checkout: just somewhere for the Buy button to point.
+const PLACEHOLDER_PAYMENT_LINK = 'https://example.com/pay';
 
 const SAMPLE_GRANT =
   'https://accounts.google.com/o/oauth2/v2/auth?' +
@@ -72,8 +78,11 @@ async function main() {
 }
 
 function startSite() {
+  const env = { ...process.env, STRIPE_PAYMENT_LINK: PLACEHOLDER_PAYMENT_LINK };
+  delete env.VERCEL_ENV;
   const child = spawn(process.execPath, ['--disable-warning=ExperimentalWarning', join(ROOT, 'scripts', 'serve-site.ts'), '--port', String(PORT)], {
     cwd: ROOT,
+    env,
     stdio: ['ignore', 'inherit', 'inherit'],
   });
   child.exited = new Promise((resolve) => child.once('exit', resolve));
@@ -140,7 +149,10 @@ async function gate(page, size) {
   await shoot(page, `gate-${size}`);
 }
 
-/** Joining the waitlist (and offering a call), through the real form and API. */
+/**
+ * Joining the waitlist (and offering a call), through the real form and API; then the
+ * page from the Buy button down to the footer's Privacy and Terms links.
+ */
 async function joined(page, size) {
   await page.goto(`${SITE}/#join`, { waitUntil: 'networkidle' });
   await page.fill('#join-email', SAMPLE_SIGNUP.email);
@@ -149,7 +161,11 @@ async function joined(page, size) {
   await page.check('#join-interview');
   await page.click('form[data-waitlist] button[type="submit"]');
   await page.locator('#join-status.success').waitFor();
-  await page.locator('#join').evaluate((el) => el.scrollIntoView({ block: 'start' }));
+  const buy = page.locator('#pricing a[data-buy]');
+  if ((await buy.getAttribute('href')) !== PLACEHOLDER_PAYMENT_LINK) throw new Error('the Buy button is missing or points somewhere else');
+  for (const href of ['/privacy', '/terms']) await page.locator(`footer a[href="${href}"]`).waitFor();
+  // The Buy button near the top, or as far down as the page goes.
+  await buy.evaluate((el) => window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - 24));
   await shoot(page, `waitlist-joined-${size}`);
 }
 

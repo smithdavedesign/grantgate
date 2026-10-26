@@ -8,7 +8,7 @@ M4's exit criterion asks for 10 interviews scheduled. This file is how they are 
 
 We want to learn two things. Would the people the PRD targets pay $5–9/month for grantgate? And who is the buyer: the owner, or an outsourced IT provider?
 
-Ask 10 people. A "yes" counts only when it comes with a reason or an action, such as a pre-order, an introduction or asking for the beta. A pre-order through the landing page counts as a yes.
+Ask 10 people. A "yes" counts only when it comes with a reason or an action, such as a purchase, an introduction or asking for the beta. A purchase through the landing page's Buy button counts as a yes.
 
 - **At least 3 of 10** would pay: keep going. Next come a Chrome Web Store listing and real onboarding.
 - **Fewer than 2** of 10 would pay: stop. Kill grantgate, or rethink who it's for.
@@ -116,6 +116,6 @@ Initials only. A row's status moves from "to invite" to "invited", then "schedul
 ## After each call
 
 - Fill in the row the same day: role, team size, where you found them, both price answers and one line of notes.
-- Check the Stripe dashboard for pre-orders, and count each one as a yes at $5.
+- Check the Stripe dashboard for purchases, and count each one as a yes at $5 (the site sells $49 a year, about $4 a month).
 - After the 10th call, apply the decision rule at the top.
 - Also note the buyer pattern: did owners say yes, or IT providers? That decides who the store listing and the landing page should speak to.
