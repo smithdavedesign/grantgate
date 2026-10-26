@@ -3,8 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>grantgate — stop risky “Sign in with Google” grants</title>
-  <meta name="description" content="grantgate is a browser extension that stops risky “Sign in with Google” grants until you've checked them, explains every permission in plain English, and keeps an encrypted record of every sign-in.">
+  <!-- grantgate:head -->
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231a56db'/%3E%3Cpath d='M9 16.5l4.5 4.5L23 11' stroke='white' stroke-width='3.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="/styles.css">
   <script type="module" src="/page.js"></script>
@@ -153,18 +152,17 @@
     <section id="pricing" class="band">
       <div class="wrap">
         <div class="pricing card">
-          <p class="eyebrow">Founding plan</p>
-          <p class="price-line"><span class="price">$5</span> <span class="per">/ month</span></p>
+          <p class="eyebrow">For your business</p>
+          <p class="price-line"><span class="price">$49</span> <span class="per">/ year</span></p>
           <p class="for">One flat price for your whole business, up to 50 people.</p>
           <ul class="ticks">
             <li>grantgate for everyone on your team</li>
             <li>One shared allow and block list, as a policy file</li>
             <li>A 15-minute setup call</li>
-            <li>Every update during the beta</li>
+            <li>Every update while your plan runs</li>
           </ul>
-          <a class="button primary wide" href="/api/checkout">Pre-order for $5/month</a>
-          <p class="fineprint">Cancel any time. Full refund within 30 days of your first payment. See the <a href="/terms.html">terms</a>.</p>
-          <p class="fineprint">Not ready to pay? <a href="#join">Join the waitlist</a> for free.</p>
+          <!-- grantgate:buy -->
+          <p class="fineprint">Billed yearly; cancel any time. Full refund within 30 days, no questions asked. See the <a href="/terms">terms</a>.</p>
         </div>
       </div>
     </section>
@@ -215,7 +213,7 @@
             <button class="button primary wide" type="submit">Join the waitlist</button>
           </form>
           <p id="join-status" class="form-status" role="status" aria-live="polite"></p>
-          <p class="fineprint">We keep your answers in our waitlist database and nowhere else. Read the <a href="/privacy.html">privacy policy</a>; you can remove yourself any time.</p>
+          <p class="fineprint">We keep your answers in our waitlist database and nowhere else. Read the <a href="/privacy">privacy policy</a>; you can remove yourself any time.</p>
         </div>
       </div>
     </section>
@@ -225,8 +223,8 @@
     <div class="wrap">
       <p>grantgate — a consent-click gate for Google sign-ins.</p>
       <nav aria-label="Footer">
-        <a href="/privacy.html">Privacy</a>
-        <a href="/terms.html">Terms</a>
+        <a href="/privacy">Privacy</a>
+        <a href="/terms">Terms</a>
         <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer">Your Google permissions</a>
       </nav>
     </div>

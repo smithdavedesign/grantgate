@@ -1,7 +1,7 @@
 // The landing page's API, as fetch-style Request → Response:
 //
 //   POST /api/waitlist   join or leave the waitlist (JSON from page.js, or a plain form post)
-//   GET  /api/checkout   303 to the founding-plan checkout (CHECKOUT_URL), or to the waitlist
+//   GET  /api/checkout   303 to the Stripe Payment Link (STRIPE_PAYMENT_LINK), or to the waitlist
 //
 // nodeHandler() serves it to Node's (req, res), which is what both the Vercel
 // function (scripts/build-site.ts) and the local server (scripts/serve-site.ts) run.
@@ -15,13 +15,16 @@ export const API_ROUTES: readonly string[] = Object.freeze(['/api/waitlist', '/a
 /** A sign-up is a few hundred bytes; anything much bigger isn't one. */
 export const MAX_BODY_BYTES = 4096;
 
-/** Where "Pre-order" goes while no checkout page is configured. */
+/** Where /api/checkout goes while no payment link is configured. */
 export const CHECKOUT_FALLBACK = '/?checkout=soon#join';
 
-/** Sent with every page: the site's own scripts and styles only, never framed. */
+/**
+ * Sent with every page: the site's own scripts and styles only, never framed. Pages may
+ * also reach RepoHQ's signal endpoint (SIGNAL_URL in page.ts), which counts visits.
+ */
 export const SITE_HEADERS: Readonly<Record<string, string>> = Object.freeze({
   'Content-Security-Policy':
-    "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
+    "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://repohq.vercel.app; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
   'X-Content-Type-Options': 'nosniff',
   'X-Frame-Options': 'DENY',
   'Referrer-Policy': 'no-referrer',
@@ -41,7 +44,7 @@ export const MESSAGES = Object.freeze({
 export interface ApiDeps {
   /** null when DATABASE_URL isn't set: sign-ups are refused, never silently dropped. */
   store: WaitlistStore | null;
-  /** The founding-plan checkout page (a Stripe Payment Link), from CHECKOUT_URL. */
+  /** The checkout page (a Stripe Payment Link), from STRIPE_PAYMENT_LINK. */
   checkoutUrl?: string;
   /** Defaults to console.error. Only ever given redacted text. */
   log?: (message: string) => void;
@@ -102,7 +105,7 @@ function checkout(request: Request, configured: string | undefined, log: (messag
   // The target only ever comes from the environment, never from the request.
   const target = checkoutTarget(configured);
   if (target === null && configured !== undefined && configured.trim() !== '') {
-    log('grantgate checkout: CHECKOUT_URL is not an https URL, so pre-orders go to the waitlist');
+    log('grantgate checkout: STRIPE_PAYMENT_LINK is not an https URL, so checkout goes to the waitlist');
   }
   return new Response(null, { status: 303, headers: { Location: target ?? CHECKOUT_FALLBACK, 'Cache-Control': 'no-store' } });
 }
@@ -270,6 +273,6 @@ export function storeFromEnv(env: Env): WaitlistStore | null {
 
 /** What the Vercel function runs: the API with its store and checkout from the environment. */
 export function productionHandler(env: Env) {
-  const deps: ApiDeps = { store: storeFromEnv(env), checkoutUrl: env.CHECKOUT_URL };
+  const deps: ApiDeps = { store: storeFromEnv(env), checkoutUrl: env.STRIPE_PAYMENT_LINK };
   return nodeHandler((request) => handleApi(request, deps));
 }

@@ -1,5 +1,13 @@
 # grantgate — build notes
 
+> **Go-live pass (2026-10-26):** see [LAUNCH-READY.md](LAUNCH-READY.md). It added search and sharing tags, robots.txt, the sitemap, a share image, a visit beacon for RepoHQ, rewritten privacy and terms pages, and a Buy button. Where the M4 notes below disagree with it, the go-live pass wins:
+> - The price is **$49/year** (REVENUE.md), not $5/month.
+> - The payment link comes from **`STRIPE_PAYMENT_LINK`**, not `CHECKOUT_URL`.
+> - The pages are at **`/privacy`** and **`/terms`**, and the old `.html` addresses redirect there.
+> - The site now counts visits for RepoHQ, with no cookies.
+>
+> The sections "What the product does now" through "What's left" are up to date.
+
 ## Plan
 
 Milestone: **M4 — Landing page and demand test** (MVP run, 4 of 4). M1 (parser, scope labels), M2 (gate, allowlist) and M3 (encrypted ledger, policy files) are built, and their 304 tests stay green. There is still no REVIEW.md, REVENUE.md or TODOS.md, so this plan comes from PRD.md, ROADMAP.md, the run's brief ("usable and can take money at the end") and the M3 notes below. Nobody was available to ask, so every open question was decided here and written down.
@@ -172,7 +180,7 @@ Other paths covered:
 
 grantgate has two parts:
 - **The extension** (M1–M3), which is the product. It's a Chrome MV3 extension that also works in other Chromium browsers. It has no server and no runtime dependencies, and nothing leaves the browser.
-- **The website** (new in M4): a landing page with a waitlist and a founding-plan checkout, which runs on Vercel's free tier.
+- **The website** (M4, made launch-ready in the go-live pass): a landing page with a waitlist and a $49/year Buy button, which runs on Vercel's free tier.
 
 **The extension**
 - **The gate (M2):**
@@ -194,7 +202,7 @@ grantgate has two parts:
   - Policy files: **Export** writes `grantgate-policy.json`. **Import** confirms first and merges, and a block always wins. This is how an owner hands the same lists to staff.
 - **Review grants at Google:** the settings page links to `https://myaccount.google.com/permissions`.
 
-**The website (M4, new)**
+**The website (M4, plus the go-live pass)**
 - **Landing page** (`site/index.html`) covers:
   - the problem, and how grantgate works;
   - **the three risk levels**, quoting the extension's own labels. High is stopped until you confirm; medium is allowed and recorded; low goes straight through;
@@ -206,12 +214,21 @@ grantgate has two parts:
   - Repeat sign-ups get the same reply and can't overwrite earlier answers. A hidden honeypot field quietly drops naive bots.
   - Without `DATABASE_URL`, it refuses with 503 rather than losing sign-ups.
 - **Remove me:** a form on the privacy page deletes an address at once.
-- **Founding plan:** **Pre-order for $5/month** (one business, up to 50 people; cancel any time; refund within 30 days) goes to `GET /api/checkout`. That redirects with 303 to the Stripe Payment Link in `CHECKOUT_URL`. Until that's set, it goes to the waitlist with "Pre-orders open soon".
-- **Privacy and terms pages**, linked from every footer.
+- **Buying:**
+  - **Buy for $49/year** (one business, up to 50 people; billed yearly; full refund within 30 days, no questions asked) links straight to the Stripe Payment Link in `STRIPE_PAYMENT_LINK`. The link is read at build time.
+  - Without it, the button isn't in the page at all, and the pricing card offers the waitlist instead.
+  - `GET /api/checkout` still redirects (303) to the same link, or to the waitlist with "Checkout opens soon".
+- **Privacy (`/privacy`) and terms (`/terms`)**, linked from every footer. The old `.html` addresses redirect there with a 308.
+- **Search and sharing:**
+  - Every page gets its own title, description and canonical URL, Open Graph and Twitter tags, a 1200×630 share image (`og.png`, drawn in code at build time), and JSON-LD for a SoftwareApplication with a $49/year Offer.
+  - The site also serves `robots.txt` and `sitemap.xml`.
+- **Visit beacon:** `page.js` tells RepoHQ about `visit` (once per session), `activate` (the first waitlist join in this browser) and `checkout` (each Buy click).
+  - It doesn't send from automated browsers, from builds other than production, or when localStorage `repohq:notrack` is set.
+  - See LAUNCH-READY.md.
 - **Hardening:**
-  - Strict CSP: only the site's own script and stylesheet, no inline code, no framing. Also `nosniff` and `no-referrer`.
+  - Strict CSP: only the site's own script and stylesheet, no inline code, no framing. Also `nosniff` and `no-referrer`. The one connection allowed beyond the site itself is RepoHQ's beacon.
   - A 4 KB request cap.
-  - No analytics or cookies.
+  - No cookies and no third-party scripts.
   - Logs redact URLs and email addresses.
 
 **Demand test**
@@ -236,7 +253,7 @@ Requires Node 22.18+ (or 23.6+), which runs `.ts` files directly. Since M4, run 
 
 ```sh
 npm ci               # the Neon driver (runtime), plus typescript, @types/node and playwright-core (dev)
-npm test             # node:test, 419 tests (74 M1, 121 M2, 109 M3, 115 M4); no browser, no network, no database
+npm test             # node:test, 489 tests (M1–M4 plus the go-live pass); no browser, no network, no database
 npm run typecheck    # tsc over src, test and scripts
 npm run build        # the extension → dist/extension/
 npm run site         # the website at http://localhost:4321/ (waitlist in memory; add -- --port N to change)
@@ -248,8 +265,9 @@ npm run screenshots  # PNGs → docs/screenshots/ (needs CHROMIUM_PATH; never do
 1. Open `http://localhost:4321/`. Check that the three risk levels are listed and that the links resolve.
 2. Join the waitlist with an address like `owner@acme.example` and tick the call box. The reply appears in place, and the server keeps the sign-up in memory until it stops.
 3. Turn JS off and join again. You get a plain reply page saying the same thing.
-4. Click **Pre-order for $5/month**. Locally there's no `CHECKOUT_URL`, so you land on the waitlist with "Pre-orders open soon".
-5. On `/privacy.html`, remove the address.
+4. The pricing card has no Buy button, because `STRIPE_PAYMENT_LINK` isn't set; it offers the waitlist instead. Start the server with `STRIPE_PAYMENT_LINK=https://example.com/pay npm run site` and the button appears. `/api/checkout` still lands on the waitlist with "Checkout opens soon".
+5. On `/privacy`, remove the address. `/privacy.html` should redirect there.
+6. `/robots.txt`, `/sitemap.xml` and `/og.png` are served too. Nothing is sent to RepoHQ locally, because this isn't a production build.
 
 **Load the extension in Chrome:**
 1. Run `npm run build`.
@@ -292,14 +310,18 @@ npm run screenshots  # PNGs → docs/screenshots/ (needs CHROMIUM_PATH; never do
    - In Neon's SQL editor, `SELECT * FROM waitlist` should show it. The table is created by the first sign-up.
    - Remove it with the privacy page's form.
    - Check that the page's response headers include the CSP.
-4. **Taking money:** once David has created the Stripe Payment Link (requested in `.provision`), put its URL in the project's env as `CHECKOUT_URL` and redeploy. **Pre-order** then goes to Stripe. A value that isn't a plain `https:` URL is ignored and logged by name only.
+   - Then the go-live checks in LAUNCH-READY.md.
+4. **Taking money:** once David has created the Stripe Payment Link (requested in `.provision`), set it in the project's env (Production) as `STRIPE_PAYMENT_LINK` and redeploy.
+   - The link is read at build time, so it only appears after a redeploy.
+   - The **Buy for $49/year** button then appears, and `/api/checkout` goes to Stripe as well.
+   - A value that isn't a plain `https:` URL is ignored, and the build log says so by name only.
 5. **Interview volunteers:** run the query in `docs/interview-script.md` in Neon's SQL editor.
 
 **Extension ($0):** unchanged.
 - Load `dist/extension/` unpacked. To hand it to staff, zip that folder, and send them your exported policy file to import.
 - The Microsoft Edge Add-ons store runs the same MV3 build; as far as I know, registration there is free.
 - The Chrome Web Store has a one-time registration fee, so publishing there is David's call.
-- Founding-plan customers get the build and setup help by email after paying, as the terms say.
+- Customers get the build and setup help by email after paying, as the terms say.
 
 ## Exit criteria
 
@@ -315,9 +337,9 @@ npm run screenshots  # PNGs → docs/screenshots/ (needs CHROMIUM_PATH; never do
 | M2: confirming the interstitial adds nothing to the allowlist unless "always allow" is chosen | ✅ pass |
 | M1: parser on the roadmap URL; `scopeRisk` examples; non-Google URL returns null; all 20 fixtures | ✅ pass |
 
-- `npm test`: 419 tests, 419 passing.
+- `npm test`: 489 tests, 489 passing (419 at M4; the go-live pass added the rest).
 - `npm run typecheck`: clean.
-- `npm run build:site`: writes the static pages, `page.js`, two functions and `config.json`.
+- `npm run build:site`: writes the static pages, `page.js`, `robots.txt`, `sitemap.xml`, `og.png`, two functions and `config.json`.
 - `npm run screenshots`: 6 PNGs, each opened and checked.
 
 I injected three deliberate bugs by hand, one at a time, and reverted each. All three were caught:
@@ -327,16 +349,22 @@ I injected three deliberate bugs by hand, one at a time, and reverted each. All 
 
 ## Infrastructure
 
-Requested in `.provision`, for the pipeline to run through the credential broker after the build:
-- `neon db grantgate` → `DATABASE_URL`, a Postgres database on Neon's free tier, for the waitlist.
-- `vercel project grantgate` → the Vercel Hobby project that hosts the website.
+Requested through `.provision`, for the pipeline to run through the credential broker after the build.
+
+M4 asked for:
+- `neon db grantgate` → `DATABASE_URL`, a Postgres database on Neon's free tier, for the waitlist;
+- `vercel project grantgate` → the Vercel Hobby project that hosts the website;
 - `vercel env grantgate DATABASE_URL` → puts the database URL in that project's env.
-- `request "Stripe Payment Link for grantgate: …"` → for David. A $5/month founding-plan Payment Link, with its URL stored as `CHECKOUT_URL` in the Vercel env. Stripe has no monthly fee: it charges per payment, so it's $0 until someone pays.
+
+The go-live pass's `.provision` asks for:
+- `vercel project grantgate`;
+- `request "Stripe payment link for grantgate: $49/year, per REVENUE.md"` → for David. A $49/year Payment Link, with its URL stored as `STRIPE_PAYMENT_LINK` in the Vercel env. Stripe has no monthly fee: it charges per payment, so it's $0 until someone pays.
 
 Environment variables the code reads:
 - `DATABASE_URL`, in the function;
-- `CHECKOUT_URL`, in the function, optional;
-- `PORT`, for the local server, optional;
+- `STRIPE_PAYMENT_LINK` (optional), at build time for the Buy button, and in the function for `/api/checkout`;
+- `VERCEL_ENV` and `VERCEL_PROJECT_PRODUCTION_URL`, at build time; Vercel sets both. The first decides whether visits are counted; the second is the domain used in canonical URLs, the sitemap and the share image;
+- `PORT` (optional), for the local server;
 - `CHROMIUM_PATH`, for screenshots only.
 
 No secret is in the repo, and tests build any fake values at runtime.
@@ -347,8 +375,8 @@ No secret is in the repo, and tests build any fake values at runtime.
   - deploy;
   - run the Deploy smoke test;
   - follow `docs/interview-script.md`: find volunteers, invite them, book the calls and fill in the tracker.
-- **Stripe Payment Link** → `CHECKOUT_URL` (requested from David). Until then, Pre-order falls back to the waitlist.
-- **A contact address** for the privacy and terms pages. For now they say "reply to any email from grantgate", and removal is self-service. A free forwarding mailbox would be better before outreach starts.
+- **Stripe Payment Link** → `STRIPE_PAYMENT_LINK` (requested from David), then redeploy. Until then there's no Buy button.
+- **Contact:** the privacy and terms pages send people to GitHub issues, and removal is self-service. A free forwarding mailbox would be kinder for refunds, which shouldn't need a public issue.
 - **A quick legal read** of `site/privacy.html` and `site/terms.html` before charging. They're plain-language drafts and name no jurisdiction.
 - **Manual checks:**
   - the extension in a real browser (above);
@@ -359,7 +387,7 @@ No secret is in the repo, and tests build any fake values at runtime.
 - **Later:**
   - Rate limiting on `/api/waitlist` (Vercel firewall rules), or double opt-in by email.
   - Tracking which outreach channel each sign-up came from (`?ref=`).
-  - A Chrome Web Store listing (fee; David's call) and a custom domain (paid).
+  - A Chrome Web Store listing (fee; David's call) and a custom domain (paid; canonical URLs follow it automatically).
   - Automatic delivery after payment.
   - M3's list: change the passphrase, live refresh of the settings page, adding an ID by hand, a stricter mode for `medium`, `access_type=offline`, icons and a popup, re-checking `KNOWN_SCOPES` against Google's docs, and merging the two fake DOMs.
 

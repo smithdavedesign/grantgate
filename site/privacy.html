@@ -3,8 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Privacy — grantgate</title>
-  <meta name="description" content="What grantgate's website stores when you join the waitlist, where it is kept, and how to remove yourself. The extension itself sends nothing anywhere.">
+  <!-- grantgate:head -->
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231a56db'/%3E%3Cpath d='M9 16.5l4.5 4.5L23 11' stroke='white' stroke-width='3.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="/styles.css">
   <script type="module" src="/page.js"></script>
@@ -26,10 +25,11 @@
 
   <main class="prose">
     <h1>Privacy</h1>
-    <p class="updated">Last updated 25 October 2026.</p>
+    <p class="updated">Last updated 26 October 2026.</p>
+    <p>In short: the grantgate extension collects nothing. This website keeps what you type into the waitlist form, if you use it, and counts visits without cookies or any identifier.</p>
 
     <h2>The extension</h2>
-    <p>The grantgate extension has no server. Your sign-in record, your passphrase-protected key and your allow and block lists are kept in your browser's extension storage. Nothing leaves your browser: grantgate never sees your Google account, your tokens, your email or which sites you use.</p>
+    <p>The extension collects nothing. It has no server. Your sign-in record, your passphrase-protected key and your allow and block lists are kept in your browser's extension storage. Nothing leaves your browser: grantgate never sees your Google account, your tokens, your email or which sites you use.</p>
 
     <h2>This website and the waitlist</h2>
     <p>If you join the waitlist, we store:</p>
@@ -40,11 +40,25 @@
       <li>when you joined.</li>
     </ul>
     <p>We use these only to tell you when grantgate is ready and, if you ticked the box, to invite you to a call. We don't sell or share them, and we never add you to anyone else's list.</p>
-    <p>The waitlist is kept in a Postgres database run by Neon. The website is hosted by Vercel, which keeps the standard request logs any web host keeps. There are no analytics, no tracking cookies and no ads on this site.</p>
+    <p>The waitlist is kept in a Postgres database run by Neon. The website is hosted by Vercel, which keeps the standard request logs any web host keeps. There are no ads and no third-party analytics scripts on this site.</p>
     <p>We keep your details until you remove yourself, or for 12 months after grantgate launches, whichever comes first.</p>
 
+    <h2 id="counting">Counting visits</h2>
+    <p>So that grantgate's maker can see whether anyone actually uses it, pages on this site send a small message to RepoHQ (<code>repohq.vercel.app</code>), the dashboard where grantgate's maker keeps track of their projects. It is sent for three events only:</p>
+    <ul>
+      <li><code>visit</code>: the first page you open here in a browser session;</li>
+      <li><code>activate</code>: the first time you join the waitlist from this browser;</li>
+      <li><code>checkout</code>: each time you click Buy.</li>
+    </ul>
+    <p>Each message holds three things: the name “grantgate”, which event it was, and the address of the page that linked you here if that page was on another site (otherwise nothing). It holds no cookie, no identifier, nothing you typed and nothing about your Google account. Like any request on the internet, it reaches RepoHQ's host (Vercel) with your IP address and browser type, which go into that host's standard request logs.</p>
+    <p>To remember that a visit or a sign-up was already counted, your browser keeps a small note in its own session storage and local storage. These notes are not cookies, and they are never sent anywhere.</p>
+    <p>Nothing is sent from automated browsers or from preview copies of this site. To turn it off in your own browser, open the browser's console on this site and run <code>localStorage.setItem('repohq:notrack', '1')</code>. A content blocker that blocks <code>repohq.vercel.app</code> works too.</p>
+
+    <h2>Cookies</h2>
+    <p>This website sets no cookies, and the messages above are sent without them. Stripe's checkout page is Stripe's own site, with its own cookies and privacy policy.</p>
+
     <h2>Payments</h2>
-    <p>If you pre-order the founding plan, Stripe handles the payment. We receive your name, email address and whether you have paid; we never see your card number.</p>
+    <p>If you buy grantgate, Stripe handles the payment. We receive your name, email address and whether you have paid; we never see your card number.</p>
 
     <h2 id="remove">Remove yourself</h2>
     <p>Enter the address you signed up with and it is deleted straight away. You'll see the same message whether or not it was on the list.</p>
@@ -57,15 +71,17 @@
       <button class="button" type="submit">Remove me from the waitlist</button>
     </form>
     <p id="leave-status" class="form-status" role="status" aria-live="polite"></p>
-    <p>For anything else, reply to any email you've had from grantgate.</p>
+
+    <h2>Contact</h2>
+    <p>For anything else, open an issue on <a href="https://github.com/smithdavedesign/grantgate/issues">grantgate's GitHub repository</a>. Issues are public, so please don't put your email address or anything else personal in one.</p>
   </main>
 
   <footer class="site">
     <div class="wrap">
       <p>grantgate — a consent-click gate for Google sign-ins.</p>
       <nav aria-label="Footer">
-        <a href="/privacy.html">Privacy</a>
-        <a href="/terms.html">Terms</a>
+        <a href="/privacy">Privacy</a>
+        <a href="/terms">Terms</a>
         <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer">Your Google permissions</a>
       </nav>
     </div>

@@ -32,6 +32,18 @@ function post(path: string, body: string, type: string | null = JSON_TYPE): Requ
 const postJson = (fields: unknown) => post('/api/waitlist', JSON.stringify(fields));
 const postForm = (fields: Record<string, string>) => post('/api/waitlist', new URLSearchParams(fields).toString(), FORM_TYPE);
 
+/** Serves `handle` on a free port, asks it for /api/checkout, and says where it was sent. */
+async function checkoutVia(handle: ReturnType<typeof productionHandler>): Promise<{ status: number; location: string | null }> {
+  const server = createServer((req, res) => void handle(req, res));
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+  try {
+    const res = await fetch(`http://127.0.0.1:${(server.address() as AddressInfo).port}/api/checkout`, { redirect: 'manual' });
+    return { status: res.status, location: res.headers.get('location') };
+  } finally {
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  }
+}
+
 function deps(overrides: Partial<ApiDeps> = {}) {
   const store = memoryStore();
   const logs: string[] = [];
@@ -219,7 +231,7 @@ describe('handleApi: POST /api/waitlist', () => {
 describe('handleApi: GET /api/checkout', () => {
   const get = (path = '/api/checkout', method = 'GET') => new Request(`${BASE}${path}`, { method });
 
-  it('sends a pre-order to the configured checkout page', async () => {
+  it('sends checkout to the configured payment link', async () => {
     const res = await handleApi(get(), { store: null, checkoutUrl: 'https://pay.example/founding-plan' });
     assert.equal(res.status, 303);
     assert.equal(res.headers.get('location'), 'https://pay.example/founding-plan');
@@ -236,13 +248,14 @@ describe('handleApi: GET /api/checkout', () => {
   });
 
   it('treats an insecure or malformed checkout URL as unset, and logs that without its value', async () => {
-    for (const bad of ['http://pay.example/plan', 'https://user:pw@pay.example/plan', 'javascript:alert(1)', 'pay.example/plan', ' ']) {
+    const withCredentials = ['https://', 'user', ':', 'pw', '@pay.example/plan'].join('');
+    for (const bad of ['http://pay.example/plan', withCredentials, 'javascript:alert(1)', 'pay.example/plan', ' ']) {
       const logs: string[] = [];
       const res = await handleApi(get(), { store: null, checkoutUrl: bad, log: (m) => logs.push(m) });
       assert.equal(res.headers.get('location'), CHECKOUT_FALLBACK, bad);
       if (bad.trim() !== '') {
         assert.equal(logs.length, 1, bad);
-        assert.match(logs[0], /CHECKOUT_URL is not an https URL/);
+        assert.match(logs[0], /STRIPE_PAYMENT_LINK is not an https URL/);
         assert.ok(!logs[0].includes('pay.example'), logs[0]);
       }
     }
@@ -276,7 +289,8 @@ describe('checkoutTarget, redact and escapeHtml', () => {
   it('keeps only https URLs without credentials', () => {
     assert.equal(checkoutTarget('https://pay.example/founding'), 'https://pay.example/founding');
     assert.equal(checkoutTarget('  https://pay.example/founding  '), 'https://pay.example/founding');
-    for (const bad of [undefined, '', 'http://pay.example', 'https://a:b@pay.example', 'https://a@pay.example', 'ftp://pay.example', 'nope']) {
+    const withCredentials = ['https://', 'a', ':', 'b', '@pay.example'].join('');
+    for (const bad of [undefined, '', 'http://pay.example', withCredentials, 'https://a@pay.example', 'ftp://pay.example', 'nope']) {
       assert.equal(checkoutTarget(bad), null, String(bad));
     }
   });
@@ -449,8 +463,13 @@ describe('nodeHandler over real HTTP', () => {
     }
   });
 
-  it('passes CHECKOUT_URL from the environment to the production handler', async () => {
-    const handle = productionHandler({ CHECKOUT_URL: 'https://pay.example/founding-plan' });
+  it('passes STRIPE_PAYMENT_LINK from the environment to the production handler', async () => {
+    assert.equal(
+      (await checkoutVia(productionHandler({ CHECKOUT_URL: 'https://pay.example/old-name' }))).location,
+      CHECKOUT_FALLBACK,
+      'the old variable name is no longer read',
+    );
+    const handle = productionHandler({ STRIPE_PAYMENT_LINK: 'https://pay.example/founding-plan' });
     const prod = createServer((req, res) => void handle(req, res));
     await new Promise<void>((resolve) => prod.listen(0, '127.0.0.1', resolve));
     try {

@@ -9,13 +9,23 @@ import { GOOGLE_PERMISSIONS_URL } from '../src/extension/options.ts';
 import { HONEYPOT_FIELD, MAX_EMAIL_LENGTH, ROLES, TEAM_SIZES } from '../src/site/waitlist.ts';
 import { API_ROUTES } from '../src/site/api.ts';
 import { CHECKOUT_SOON, NETWORK_ERROR, SENDING, UNEXPECTED_REPLY, enhanceForm, showCheckoutNotice } from '../src/site/page.ts';
+import { DEFAULT_ORIGIN, PUBLIC_PAGES, renderPage } from '../scripts/site-pages.ts';
 import { FakeElement } from './helpers/fake-dom.ts';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const SITE = join(ROOT, 'site');
-const PAGES = ['index.html', 'privacy.html', 'terms.html'];
-const read = (file: string) => readFileSync(join(SITE, file), 'utf8');
+const PAGES = PUBLIC_PAGES.map((p) => p.file);
+const GITHUB_ISSUES = 'https://github.com/smithdavedesign/grantgate/issues';
+const source = (file: string) => readFileSync(join(SITE, file), 'utf8');
+/** A page as the build writes it, with checkout open (a placeholder link) so the Buy button is there too. */
+const read = (file: string) => {
+  const page = PUBLIC_PAGES.find((p) => p.file === file);
+  assert.ok(page, file);
+  return renderPage(source(file), page, { origin: DEFAULT_ORIGIN, paymentLink: 'https://example.com/pay', deployment: 'production' });
+};
 const INDEX = read('index.html');
+/** The file a root-relative path is served from: a clean page URL, or the file of that name. */
+const servedFile = (path: string) => PUBLIC_PAGES.find((p) => p.path === path)?.file ?? path.slice(1);
 
 // --- A few regex helpers for our own static HTML (no nesting of the same tag). ---
 
@@ -156,21 +166,22 @@ describe('the landing page', () => {
     assert.equal(input?.tabindex, '-1');
     assert.equal(input?.autocomplete, 'off');
     assert.ok(!('hidden' in (input ?? {})) && input?.type !== 'hidden', 'type=hidden is skipped by bots');
-    assert.match(read('styles.css'), /\.hp\s*\{[^}]*position:\s*absolute;[^}]*left:\s*-10000px;/);
+    assert.match(source('styles.css'), /\.hp\s*\{[^}]*position:\s*absolute;[^}]*left:\s*-10000px;/);
   });
 
-  it('offers the founding plan at $5/month through the checkout route', () => {
+  it('offers one plan at $49/year, with the refund and the terms beside the Buy button', () => {
     const pricing = /<section\b[^>]*id="pricing"[^>]*>([\s\S]*?)<\/section>/.exec(INDEX)?.[1] ?? '';
     const text = textOf(pricing);
-    assert.match(text, /\$5\s*\/\s*month/);
+    assert.match(text, /\$49\s*\/\s*year/);
+    assert.doesNotMatch(text, /\/\s*month/);
     assert.match(text, /up to 50 people/);
-    assert.match(text, /[Cc]ancel any time/);
-    assert.match(text, /30 days/);
-    const preorder = openTags(pricing, 'a').find((a) => a.href === '/api/checkout');
-    assert.ok(preorder, 'a Pre-order link to /api/checkout');
-    assert.match(pricing, /href="\/terms.html"/);
+    assert.match(text, /[Bb]illed yearly/);
+    assert.match(text, /30 days, no questions asked/);
+    const buy = openTags(pricing, 'a').find((a) => 'data-buy' in a);
+    assert.equal(buy?.href, 'https://example.com/pay');
+    assert.match(pricing, /href="\/terms"/);
     const notice = openTags(INDEX, 'p').find((p) => p.id === 'checkout-notice');
-    assert.ok(notice && 'hidden' in notice, 'a hidden notice for "pre-orders open soon"');
+    assert.ok(notice && 'hidden' in notice, 'a hidden notice for "checkout opens soon"');
   });
 
   it("links to Google's own permissions page, as the extension does", () => {
@@ -187,18 +198,25 @@ describe('every site page', () => {
       assert.match(html, /<html lang="en">/);
       assert.match(html, /<meta charset="utf-8">/);
       assert.match(html, /<meta name="viewport" content="width=device-width, initial-scale=1">/);
+      assert.equal(elements(html, 'title').length, 1);
       assert.ok(textOf(elements(html, 'title')[0]?.inner ?? '').includes('grantgate'));
       assert.match(html, /<meta name="description" content="[^"]{40,}">/);
       assert.equal(elements(html, 'h1').length, 1);
     });
 
-    it(`${page}: loads only its own stylesheet and script, with nothing inline`, () => {
+    it(`${page}: loads only its own stylesheet and script, with nothing inline but its JSON-LD`, () => {
       assert.deepEqual(openTags(html, 'link').filter((l) => l.rel === 'stylesheet').map((l) => l.href), ['/styles.css']);
       const scripts = elements(html, 'script');
-      assert.equal(scripts.length, 1);
-      assert.equal(scripts[0].attrs.src, '/page.js');
-      assert.equal(scripts[0].attrs.type, 'module');
-      assert.equal(scripts[0].inner.trim(), '');
+      const code = scripts.filter((s) => s.attrs.type !== 'application/ld+json');
+      assert.equal(code.length, 1);
+      assert.equal(code[0].attrs.src, '/page.js');
+      assert.equal(code[0].attrs.type, 'module');
+      assert.equal(code[0].inner.trim(), '');
+      // Structured data is a data block: browsers never run it, so the CSP's script-src doesn't apply.
+      const data = scripts.filter((s) => s.attrs.type === 'application/ld+json');
+      assert.equal(data.length, 1);
+      assert.equal(data[0].attrs.src, undefined);
+      assert.doesNotThrow(() => JSON.parse(data[0].inner));
       assert.doesNotMatch(html, /<style\b/i);
       assert.doesNotMatch(html, /\sstyle\s*=/i);
       assert.doesNotMatch(html, /\son[a-z]+\s*=/i);
@@ -211,7 +229,7 @@ describe('every site page', () => {
       const targets = [
         ...openTags(html, 'a').map((a) => a.href),
         ...openTags(html, 'link').map((l) => l.href),
-        ...openTags(html, 'script').map((s) => s.src),
+        ...openTags(html, 'script').filter((s) => s.type !== 'application/ld+json').map((s) => s.src),
         ...openTags(html, 'form').map((f) => f.action),
       ];
       for (const target of targets) {
@@ -228,7 +246,8 @@ describe('every site page', () => {
         assert.ok(file.startsWith('/'), `${page}: ${target} should be root-relative`);
         if (API_ROUTES.includes(file)) continue;
         if (file === '/page.js') continue; // built from src/site/page.ts
-        const onDisk = file === '/' ? 'index.html' : file.slice(1);
+        assert.doesNotMatch(file, /^\/(privacy|terms)\.html$/, `${page}: ${target}: link to the clean URL`);
+        const onDisk = servedFile(file);
         assert.ok(existsSync(join(SITE, onDisk)), `${page}: ${target}`);
         if (hash && onDisk === 'index.html') assert.ok(indexIds.has(hash), `${page}: ${target}`);
       }
@@ -239,15 +258,15 @@ describe('every site page', () => {
 
     it(`${page}: links to the privacy policy and the terms in its footer`, () => {
       const footer = elements(html, 'footer')[0]?.inner ?? '';
-      assert.match(footer, /href="\/privacy.html"/);
-      assert.match(footer, /href="\/terms.html"/);
+      assert.match(footer, /<a href="\/privacy">Privacy<\/a>/);
+      assert.match(footer, /<a href="\/terms">Terms<\/a>/);
     });
   }
 
   it('privacy.html says what is stored, where, and offers self-service removal', () => {
     const html = read('privacy.html');
     const text = textOf(html);
-    for (const words of [/email address/, /role/, /team size/, /call/, /Neon/, /Vercel/, /Stripe/, /no analytics|No analytics/, /never leaves your browser|nothing leaves your browser/i]) {
+    for (const words of [/email address/, /role/, /team size/, /call/, /Neon/, /Vercel/, /Stripe/, /never leaves your browser|nothing leaves your browser/i]) {
       assert.match(text, words);
     }
     const form = formWith(html, 'leave');
@@ -260,12 +279,35 @@ describe('every site page', () => {
     assert.ok(email && 'required' in email);
   });
 
-  it('terms.html sets out the price, cancellation and refunds', () => {
+  it('privacy.html says the extension collects nothing, names the three counted events, and the cookies (none)', () => {
+    const html = read('privacy.html');
+    const text = textOf(html);
+    assert.match(text, /The extension collects nothing/);
+    assert.match(text, /RepoHQ/);
+    assert.match(text, /repohq\.vercel\.app/);
+    for (const kind of ['visit', 'activate', 'checkout']) assert.match(html, new RegExp(`<code>${kind}</code>`), kind);
+    assert.match(text, /no cookies/i);
+    assert.match(text, /repohq:notrack/);
+    assert.doesNotMatch(text, /There are no analytics/, 'the old promise is gone now that visits are counted');
+  });
+
+  it('privacy.html and terms.html take questions through GitHub issues', () => {
+    for (const file of ['privacy.html', 'terms.html']) {
+      assert.ok(openTags(read(file), 'a').some((a) => a.href === GITHUB_ISSUES), file);
+      assert.doesNotMatch(textOf(read(file)), /reply to any email/i, `${file}: there is no mailbox to reply to`);
+    }
+  });
+
+  it('terms.html sets out the price, renewal, refunds and the lack of a warranty', () => {
     const text = textOf(read('terms.html'));
-    assert.match(text, /\$5\s*\/\s*month/);
-    assert.match(text, /30 days/);
+    assert.match(text, /\$49 a year/);
+    assert.match(text, /up to 50 people/);
+    assert.doesNotMatch(text, /\$5\b|\/month|a month/);
+    assert.match(text, /full refund within 30 days of any payment, no questions asked/i);
     assert.match(text, /[Cc]ancel any time/);
     assert.match(text, /Stripe/);
+    assert.match(text, /No warranty/);
+    assert.match(text, /without warranties of any kind/);
   });
 });
 
@@ -376,8 +418,8 @@ describe('page.ts: the waitlist form with JS', () => {
   });
 });
 
-describe('page.ts: the "pre-orders open soon" notice', () => {
-  it('shows after a pre-order click while checkout is not open yet', () => {
+describe('page.ts: the "checkout opens soon" notice', () => {
+  it('shows after /api/checkout while no payment link is set', () => {
     const notice = new FakeElement('p');
     (notice as unknown as { hidden: boolean }).hidden = true;
     assert.equal(showCheckoutNotice(notice as unknown as HTMLElement, '?checkout=soon'), true);

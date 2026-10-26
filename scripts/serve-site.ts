@@ -1,14 +1,15 @@
 // Runs the landing page locally: npm run site [-- --port 4321]
 //
 // Builds the site (into dist/site), then serves its static files with the same
-// headers as Vercel and mounts the same API handler at /api/. The waitlist is
-// kept in memory, so local sign-ups are sample data and vanish on exit.
+// headers and clean page URLs as Vercel, and mounts the same API handler at /api/.
+// The waitlist is kept in memory, so local sign-ups are sample data and vanish on exit.
 
 import { readFile } from 'node:fs/promises';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import { dirname, extname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildSite } from './build-site.ts';
+import { pageRoutes } from './site-pages.ts';
 import { SITE_HEADERS, handleApi, nodeHandler, type ApiDeps } from '../src/site/api.ts';
 import { memoryStore } from '../src/site/waitlist.ts';
 
@@ -20,6 +21,7 @@ const TYPES: Record<string, string> = {
   '.css': 'text/css; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
   '.json': 'application/json; charset=utf-8',
+  '.xml': 'application/xml; charset=utf-8',
   '.png': 'image/png',
   '.svg': 'image/svg+xml',
   '.txt': 'text/plain; charset=utf-8',
@@ -47,7 +49,14 @@ async function serveStatic(root: string, pathname: string, req: IncomingMessage,
     res.end('Method not allowed\n');
     return;
   }
-  const file = staticFile(root, pathname);
+  // The same page routes Vercel follows (config.json): a redirect, or the file to serve.
+  const route = pageRoutes().find((r) => new RegExp(r.src).test(pathname));
+  if (route && 'status' in route) {
+    res.writeHead(route.status, { Location: route.headers.Location, 'Content-Type': 'text/plain; charset=utf-8' });
+    res.end();
+    return;
+  }
+  const file = staticFile(root, route ? route.dest : pathname);
   if (file !== null) {
     try {
       const body = await readFile(file);

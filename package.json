@@ -1,8 +1,8 @@
 {
   "name": "grantgate",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "private": true,
-  "description": "Consent-click gate for Google OAuth grants: a Chrome MV3 extension that stops risky scope grants until you confirm them, keeps an allowlist and denylist of apps (shareable as a policy file), and records every sign-in in a passphrase-encrypted local ledger exportable as CSV. Plus its landing page, waitlist and founding-plan checkout, deployed on Vercel.",
+  "description": "Consent-click gate for Google OAuth grants: a Chrome MV3 extension that stops risky scope grants until you confirm them, keeps an allowlist and denylist of apps (shareable as a policy file), and records every sign-in in a passphrase-encrypted local ledger exportable as CSV. Plus its landing page, waitlist and $49/year Buy button, deployed on Vercel.",
   "type": "module",
   "engines": {
     "node": "^22.18 || >=23.6"
