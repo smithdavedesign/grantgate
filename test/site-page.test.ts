@@ -284,7 +284,7 @@ describe('every site page', () => {
     const text = textOf(html);
     assert.match(text, /The extension collects nothing/);
     assert.match(text, /RepoHQ/);
-    assert.match(text, /repohq\.vercel\.app/);
+    assert.match(text, /idea-factory\.1426davejobs\.workers\.dev/);
     for (const kind of ['visit', 'activate', 'checkout']) assert.match(html, new RegExp(`<code>${kind}</code>`), kind);
     assert.match(text, /no cookies/i);
     assert.match(text, /repohq:notrack/);

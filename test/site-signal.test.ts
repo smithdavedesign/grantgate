@@ -118,7 +118,7 @@ describe('sendSignal', () => {
     const { env, sent } = signals({ referrer: 'https://news.ycombinator.com/' });
     assert.equal(sendSignal(env, 'checkout'), true);
     assert.equal(sent.length, 1);
-    assert.equal(sent[0].url, 'https://repohq.vercel.app/api/ideas/signal');
+    assert.equal(sent[0].url, 'https://idea-factory.1426davejobs.workers.dev/api/ideas/signal');
     assert.equal(SIGNAL_URL, sent[0].url);
     assert.equal(sent[0].init.method, 'POST');
     // A CORS-safelisted type, so the browser sends it with no preflight.

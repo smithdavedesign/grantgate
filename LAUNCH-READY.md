@@ -41,7 +41,7 @@ Date: 2026-10-26. This pass makes the website ready for a public launch. What gr
    - **`/api/checkout`** reads the same variable. It used to read `CHECKOUT_URL`.
    - **The price on the page** is now $49/year, from REVENUE.md. It used to be $5/month.
 4. **Visit beacon** (`src/site/page.ts`, served as `/page.js` on every page).
-   - **What it sends:** a POST of `{"slug":"grantgate","kind":…,"referrer":…}` to `https://repohq.vercel.app/api/ideas/signal`, with `keepalive`, `credentials: 'omit'` and `referrerPolicy: 'no-referrer'`. It's fire-and-forget: errors are swallowed.
+   - **What it sends:** a POST of `{"slug":"grantgate","kind":…,"referrer":…}` to `https://idea-factory.1426davejobs.workers.dev/api/ideas/signal`, with `keepalive`, `credentials: 'omit'` and `referrerPolicy: 'no-referrer'`. It's fire-and-forget: errors are swallowed.
    - **The three events:**
      - `visit`: once per browser session (sessionStorage);
      - `activate`: once per browser (localStorage);
@@ -55,7 +55,7 @@ Date: 2026-10-26. This pass makes the website ready for a public launch. What gr
      - when the build wasn't production (the build writes `VERCEL_ENV` into `<meta name="vercel-env">`, so local runs, previews and screenshot runs count as non-production);
      - when localStorage `repohq:notrack` is set;
      - when storage can't be read or written.
-   - **CSP:** `connect-src` now allows `https://repohq.vercel.app` as well as the site itself. Nothing else in the CSP changed.
+   - **CSP:** `connect-src` now allows `https://idea-factory.1426davejobs.workers.dev` as well as the site itself. Nothing else in the CSP changed.
 5. **`.provision`** asks for the Vercel project and the Stripe payment link, exactly as the brief says.
 6. **Tests:**
    - `test/site-launch.test.ts`: the metadata, JSON-LD, robots, sitemap, routes, and the Buy button with and without the variable;
