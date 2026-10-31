@@ -24,7 +24,7 @@ export const CHECKOUT_FALLBACK = '/?checkout=soon#join';
  */
 export const SITE_HEADERS: Readonly<Record<string, string>> = Object.freeze({
   'Content-Security-Policy':
-    "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://repohq.vercel.app; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
+    "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://idea-factory.1426davejobs.workers.dev; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
   'X-Content-Type-Options': 'nosniff',
   'X-Frame-Options': 'DENY',
   'Referrer-Policy': 'no-referrer',

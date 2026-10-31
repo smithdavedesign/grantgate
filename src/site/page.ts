@@ -14,7 +14,7 @@ export const CHECKOUT_SOON = "Checkout opens soon. Join the waitlist below and y
 
 /** The <meta name> the build writes VERCEL_ENV into (scripts/site-pages.ts). */
 export const DEPLOYMENT_META = 'vercel-env';
-export const SIGNAL_URL = 'https://repohq.vercel.app/api/ideas/signal';
+export const SIGNAL_URL = 'https://idea-factory.1426davejobs.workers.dev/api/ideas/signal';
 export const SIGNAL_SLUG = 'grantgate';
 /** Set (to anything) in the owner's browser so their own visits aren't counted. */
 export const NOTRACK_KEY = 'repohq:notrack';
