@@ -2,7 +2,7 @@
   "name": "grantgate",
   "version": "0.5.0",
   "private": true,
-  "description": "Consent-click gate for Google OAuth grants: a Chrome MV3 extension that stops risky scope grants until you confirm them, keeps an allowlist and denylist of apps (shareable as a policy file), and records every sign-in in a passphrase-encrypted local ledger exportable as CSV. Plus its landing page, waitlist and $49/year Buy button, deployed on Vercel.",
+  "description": "Consent-click gate for Google OAuth grants: a Chrome MV3 extension that stops risky scope grants until you confirm them, keeps an allowlist and denylist of apps (shareable as a policy file), and records every sign-in in a passphrase-encrypted local ledger exportable as CSV. Plus its landing page, waitlist and $49/year Buy button, deployed on a Cloudflare Worker (Vercel build kept).",
   "type": "module",
   "engines": {
     "node": "^22.18 || >=23.6"
@@ -11,6 +11,7 @@
     "test": "node --test --disable-warning=ExperimentalWarning \"test/**/*.test.ts\"",
     "build": "node --disable-warning=ExperimentalWarning scripts/build.ts",
     "build:site": "node --disable-warning=ExperimentalWarning scripts/build-site.ts",
+    "cf:build": "NEXT_PUBLIC_DEPLOY_ENV=production node --disable-warning=ExperimentalWarning scripts/build-site.ts --cloudflare",
     "site": "node --disable-warning=ExperimentalWarning scripts/serve-site.ts",
     "screenshots": "node --disable-warning=ExperimentalWarning scripts/screenshots.mjs",
     "typecheck": "tsc -p ."

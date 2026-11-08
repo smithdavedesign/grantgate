@@ -266,7 +266,7 @@ describe('every site page', () => {
   it('privacy.html says what is stored, where, and offers self-service removal', () => {
     const html = read('privacy.html');
     const text = textOf(html);
-    for (const words of [/email address/, /role/, /team size/, /call/, /Neon/, /Vercel/, /Stripe/, /never leaves your browser|nothing leaves your browser/i]) {
+    for (const words of [/email address/, /role/, /team size/, /call/, /Neon/, /Cloudflare/, /Stripe/, /never leaves your browser|nothing leaves your browser/i]) {
       assert.match(text, words);
     }
     const form = formWith(html, 'leave');

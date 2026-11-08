@@ -296,7 +296,18 @@ npm run screenshots  # PNGs → docs/screenshots/ (needs CHROMIUM_PATH; never do
 
 ## Deploy (free tier)
 
-**Website: Vercel Hobby, with Neon's free tier ($0)**
+**Website: a Cloudflare Worker, with Neon's free tier ($0), since 2026-11-08**
+
+The Vercel account is blocked (every deployment answers 402), so the website moved to the `grantgate` Worker on
+Cloudflare's free plan: https://grantgate.1426davejobs.workers.dev.
+1. `npm ci && npm run cf:build` writes `.cloudflare/assets/` (the static pages, `_headers` with the CSP, counted as
+   production), and [`wrangler.jsonc`](wrangler.jsonc) points the Worker at it and at
+   [`src/site/worker.ts`](src/site/worker.ts), which answers `/api/*` with the same `handleApi` as the Vercel functions.
+2. `provision cloudflare deploy grantgate "$PWD"` deploys it; `provision cloudflare secret grantgate DATABASE_URL`
+   pushes the database URL from the keychain.
+3. The smoke test below applies as is, against the Worker's address.
+
+**Website: Vercel Hobby, with Neon's free tier ($0)** (kept building, but the account is blocked)
 1. The pipeline runs `.provision` through the credential broker:
    - a Neon database, which gives `DATABASE_URL`;
    - the Vercel project `grantgate`, with `DATABASE_URL` in its env.

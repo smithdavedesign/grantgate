@@ -25,7 +25,7 @@
 
   <main class="prose">
     <h1>Privacy</h1>
-    <p class="updated">Last updated 26 October 2026.</p>
+    <p class="updated">Last updated 8 November 2026.</p>
     <p>In short: the grantgate extension collects nothing. This website keeps what you type into the waitlist form, if you use it, and counts visits without cookies or any identifier.</p>
 
     <h2>The extension</h2>
@@ -40,7 +40,7 @@
       <li>when you joined.</li>
     </ul>
     <p>We use these only to tell you when grantgate is ready and, if you ticked the box, to invite you to a call. We don't sell or share them, and we never add you to anyone else's list.</p>
-    <p>The waitlist is kept in a Postgres database run by Neon. The website is hosted by Vercel, which keeps the standard request logs any web host keeps. There are no ads and no third-party analytics scripts on this site.</p>
+    <p>The waitlist is kept in a Postgres database run by Neon. The website is hosted by Cloudflare, which keeps the standard request logs any web host keeps. There are no ads and no third-party analytics scripts on this site.</p>
     <p>We keep your details until you remove yourself, or for 12 months after grantgate launches, whichever comes first.</p>
 
     <h2 id="counting">Counting visits</h2>
@@ -50,7 +50,7 @@
       <li><code>activate</code>: the first time you join the waitlist from this browser;</li>
       <li><code>checkout</code>: each time you click Buy.</li>
     </ul>
-    <p>Each message holds three things: the name “grantgate”, which event it was, and the address of the page that linked you here if that page was on another site (otherwise nothing). It holds no cookie, no identifier, nothing you typed and nothing about your Google account. Like any request on the internet, it reaches RepoHQ's host (Vercel) with your IP address and browser type, which go into that host's standard request logs.</p>
+    <p>Each message holds three things: the name “grantgate”, which event it was, and the address of the page that linked you here if that page was on another site (otherwise nothing). It holds no cookie, no identifier, nothing you typed and nothing about your Google account. Like any request on the internet, it reaches RepoHQ's host (Cloudflare) with your IP address and browser type, which go into that host's standard request logs.</p>
     <p>To remember that a visit or a sign-up was already counted, your browser keeps a small note in its own session storage and local storage. These notes are not cookies, and they are never sent anywhere.</p>
     <p>Nothing is sent from automated browsers or from preview copies of this site. To turn it off in your own browser, open the browser's console on this site and run <code>localStorage.setItem('repohq:notrack', '1')</code>. A content blocker that blocks <code>idea-factory.1426davejobs.workers.dev</code> works too.</p>
 
