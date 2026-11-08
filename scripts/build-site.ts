@@ -17,9 +17,14 @@
 //
 // No bundler and no framework: the same type stripping as the extension build.
 //
+// `node scripts/build-site.ts --cloudflare [dir]` (npm run cf:build) builds the same static files for the Cloudflare
+// Worker instead (.cloudflare/assets by default, wrangler.jsonc's assets directory), plus _headers with SITE_HEADERS.
+// The API runs in the Worker itself (src/site/worker.ts, bundled by wrangler), so no functions are written.
+//
 // Read from the environment at build time (Vercel passes its env to the build):
 //   STRIPE_PAYMENT_LINK            the Buy button's target; no button without it
-//   VERCEL_ENV                     baked into each page; page.js counts visits only in "production"
+//   NEXT_PUBLIC_DEPLOY_ENV         the deploy env, set to production by cf:build; else
+//   VERCEL_ENV                     Vercel's. Baked into each page; page.js counts visits only in "production"
 //   VERCEL_PROJECT_PRODUCTION_URL  the domain for canonical URLs, the sitemap and the share image
 
 import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
@@ -56,8 +61,12 @@ export default productionHandler(process.env);
 export { productionHandler as create };
 `;
 
-/** Writes the deploy to `outDir`, replacing whatever was there. Returns the entries written. */
-export async function buildSite(outDir = join(ROOT, '.vercel', 'output'), env: Env = process.env): Promise<string[]> {
+type Emit = (file: string, contents: string | Buffer) => Promise<void>;
+
+const compile = async (file: string) => rewriteImports(stripTypeScriptTypes(await readFile(join(ROOT, 'src', 'site', file), 'utf8')));
+
+/** Empties `outDir` and returns the writer for it, plus the list it fills. */
+async function output(outDir: string, env: Env) {
   const config = buildConfig(env);
   if (config.paymentLink === null && (env.STRIPE_PAYMENT_LINK ?? '').trim() !== '') {
     // The name only: the value never reaches a log.
@@ -66,24 +75,47 @@ export async function buildSite(outDir = join(ROOT, '.vercel', 'output'), env: E
   await rm(outDir, { recursive: true, force: true });
   await mkdir(outDir, { recursive: true });
   const written: string[] = [];
-  const emit = async (file: string, contents: string | Buffer) => {
+  const emit: Emit = async (file, contents) => {
     await mkdir(dirname(join(outDir, file)), { recursive: true });
     await writeFile(join(outDir, file), contents);
     written.push(file);
   };
-  const compile = async (file: string) => rewriteImports(stripTypeScriptTypes(await readFile(join(ROOT, 'src', 'site', file), 'utf8')));
-  const json = (value: unknown) => `${JSON.stringify(value, null, 2)}\n`;
+  return { config, written, emit };
+}
 
-  await emit('config.json', json({ version: 3, routes: [{ src: '/(.*)', headers: { ...SITE_HEADERS }, continue: true }, ...pageRoutes()] }));
+/** The static files both hosts serve: the pages, the stylesheet, page.js, robots.txt, sitemap.xml, the share image. */
+async function emitStatic(emit: Emit, config: ReturnType<typeof buildConfig>, dir: string): Promise<void> {
   for (const file of SITE_STATIC_FILES) {
     const source = await readFile(join(ROOT, 'site', file), 'utf8');
     const page = PUBLIC_PAGES.find((p) => p.file === file);
-    await emit(join('static', file), page ? renderPage(source, page, config) : source);
+    await emit(join(dir, file), page ? renderPage(source, page, config) : source);
   }
-  await emit(join('static', 'page.js'), await compile('page.ts'));
-  await emit(join('static', 'robots.txt'), robotsTxt(config.origin));
-  await emit(join('static', 'sitemap.xml'), sitemapXml(config.origin));
-  await emit(join('static', SHARE_IMAGE.file), shareImagePng());
+  await emit(join(dir, 'page.js'), await compile('page.ts'));
+  await emit(join(dir, 'robots.txt'), robotsTxt(config.origin));
+  await emit(join(dir, 'sitemap.xml'), sitemapXml(config.origin));
+  await emit(join(dir, SHARE_IMAGE.file), shareImagePng());
+}
+
+/** Cloudflare's _headers file: SITE_HEADERS on every static file, as the Vercel config's first route does. */
+export function headersFile(headers: Readonly<Record<string, string>> = SITE_HEADERS): string {
+  return `${['/*', ...Object.entries(headers).map(([name, value]) => `  ${name}: ${value}`)].join('\n')}\n`;
+}
+
+/** The Cloudflare Worker's static assets, replacing whatever was in `outDir`. Returns the files written. */
+export async function buildWorkerAssets(outDir = join(ROOT, '.cloudflare', 'assets'), env: Env = process.env): Promise<string[]> {
+  const { config, written, emit } = await output(outDir, env);
+  await emitStatic(emit, config, '');
+  await emit('_headers', headersFile());
+  return written;
+}
+
+/** Writes the deploy to `outDir`, replacing whatever was there. Returns the entries written. */
+export async function buildSite(outDir = join(ROOT, '.vercel', 'output'), env: Env = process.env): Promise<string[]> {
+  const { config, written, emit } = await output(outDir, env);
+  const json = (value: unknown) => `${JSON.stringify(value, null, 2)}\n`;
+
+  await emit('config.json', json({ version: 3, routes: [{ src: '/(.*)', headers: { ...SITE_HEADERS }, continue: true }, ...pageRoutes()] }));
+  await emitStatic(emit, config, 'static');
 
   for (const route of FUNCTION_ROUTES) {
     const fn = join('functions', `${route}.func`);
@@ -100,7 +132,10 @@ export async function buildSite(outDir = join(ROOT, '.vercel', 'output'), env: E
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const out = process.argv[2] ? resolve(process.argv[2]) : join(ROOT, '.vercel', 'output');
-  const files = await buildSite(out);
-  console.log(`grantgate: wrote ${files.length} entries to ${relative(process.cwd(), out) || '.'}`);
+  const args = process.argv.slice(2);
+  const cloudflare = args[0] === '--cloudflare';
+  const dir = cloudflare ? args[1] : args[0];
+  const out = dir ? resolve(dir) : join(ROOT, ...(cloudflare ? ['.cloudflare', 'assets'] : ['.vercel', 'output']));
+  const files = await (cloudflare ? buildWorkerAssets(out) : buildSite(out));
+  console.log(`grantgate: wrote ${files.length} ${cloudflare ? 'files for the Cloudflare Worker' : 'entries'} to ${relative(process.cwd(), out) || '.'}`);
 }

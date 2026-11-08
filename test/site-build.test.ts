@@ -6,7 +6,7 @@ import { createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { DRIVER_FILES, FUNCTION_ROUTES, GENERATED_FILES, NODE_RUNTIME, SITE_STATIC_FILES, buildSite } from '../scripts/build-site.ts';
+import { DRIVER_FILES, FUNCTION_ROUTES, GENERATED_FILES, NODE_RUNTIME, SITE_STATIC_FILES, buildSite, buildWorkerAssets, headersFile } from '../scripts/build-site.ts';
 import { PUBLIC_PAGES, SHARE_IMAGE, buildConfig, pageRoutes, renderPage, robotsTxt, sitemapXml } from '../scripts/site-pages.ts';
 import { shareImagePng } from '../scripts/share-image.ts';
 import { API_ROUTES, CHECKOUT_FALLBACK, MESSAGES, SITE_HEADERS } from '../src/site/api.ts';
@@ -74,7 +74,7 @@ describe('npm run build:site: the Vercel deploy (Build Output API v3)', () => {
       assert.equal(built, renderPage(await readFile(join(ROOT, 'site', page.file), 'utf8'), page, config), page.file);
       assert.ok(built.includes(`<title>${page.title}</title>`), page.file);
       assert.doesNotMatch(built, /data-buy/, `${page.file}: no Buy button without STRIPE_PAYMENT_LINK`);
-      assert.match(built, /<meta name="vercel-env" content="development">/);
+      assert.match(built, /<meta name="deploy-env" content="development">/);
     }
     assert.equal(await readFile(join(out, 'static', 'styles.css'), 'utf8'), await readFile(join(ROOT, 'site', 'styles.css'), 'utf8'));
   });
@@ -99,7 +99,7 @@ describe('npm run build:site: the Vercel deploy (Build Output API v3)', () => {
       });
       const index = await readFile(join(paid, 'static', 'index.html'), 'utf8');
       assert.match(index, /<a class="button primary wide" href="https:\/\/example\.com\/pay" data-buy>/);
-      assert.match(index, /<meta name="vercel-env" content="production">/);
+      assert.match(index, /<meta name="deploy-env" content="production">/);
       assert.match(index, /<link rel="canonical" href="https:\/\/grantgate\.example\/">/);
       assert.match(await readFile(join(paid, 'static', 'robots.txt'), 'utf8'), /^Sitemap: https:\/\/grantgate\.example\/sitemap\.xml$/m);
       for (const file of ['privacy.html', 'terms.html']) {
@@ -248,5 +248,43 @@ describe('npm run build:site: the Vercel deploy (Build Output API v3)', () => {
     assert.equal(target.protocol, 'https:');
     assert.match(target.hostname, /(^|\.)example$/);
     assert.ok(!seen[0].includes('Qw7'), 'the password is not in the URL');
+  });
+});
+
+describe('npm run cf:build: the Cloudflare Worker (static assets plus src/site/worker.ts)', () => {
+  let out = '';
+  before(async () => {
+    await mkdir(join(ROOT, 'dist'), { recursive: true });
+    out = await mkdtemp(join(ROOT, 'dist', '.test-worker-'));
+    await buildWorkerAssets(out, { NEXT_PUBLIC_DEPLOY_ENV: 'production' });
+  });
+  after(async () => {
+    if (out) await rm(out, { recursive: true, force: true });
+  });
+
+  it("writes the Vercel build's static files, flat, plus _headers, and no functions", async () => {
+    assert.deepEqual((await filesUnder(out)).sort(), [...SITE_STATIC_FILES, ...GENERATED_FILES, '_headers'].sort());
+  });
+
+  it('counts as production, and _headers puts SITE_HEADERS on every static file', async () => {
+    assert.match(await readFile(join(out, 'index.html'), 'utf8'), /<meta name="deploy-env" content="production">/);
+    const headers = await readFile(join(out, '_headers'), 'utf8');
+    assert.equal(headers, headersFile());
+    const lines = headers.trimEnd().split('\n');
+    assert.equal(lines[0], '/*');
+    assert.deepEqual(lines.slice(1), Object.entries(SITE_HEADERS).map(([name, value]) => `  ${name}: ${value}`));
+  });
+
+  it('matches wrangler.jsonc and the cf:build script', async () => {
+    // wrangler.jsonc → JSON: drop // comments (none of its strings hold "//") and trailing commas.
+    const text = (await readFile(join(ROOT, 'wrangler.jsonc'), 'utf8')).replace(/^\s*\/\/.*$/gm, '').replace(/,(\s*[}\]])/g, '$1');
+    const worker = JSON.parse(text);
+    const pkg = JSON.parse(await readFile(join(ROOT, 'package.json'), 'utf8'));
+    assert.equal(worker.name, 'grantgate', 'provision cloudflare deploy: the Worker is named after the repo');
+    assert.equal(worker.main, 'src/site/worker.ts');
+    assert.equal(worker.build, undefined, 'the broker runs no build command');
+    assert.deepEqual(worker.assets, { directory: '.cloudflare/assets', binding: 'ASSETS', html_handling: 'auto-trailing-slash', not_found_handling: 'none' });
+    assert.equal(pkg.scripts['cf:build'], 'NEXT_PUBLIC_DEPLOY_ENV=production node --disable-warning=ExperimentalWarning scripts/build-site.ts --cloudflare');
+    assert.match(await readFile(join(ROOT, '.gitignore'), 'utf8'), /^\.cloudflare\/$/m);
   });
 });

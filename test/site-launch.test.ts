@@ -206,8 +206,8 @@ describe('buildConfig: what the build reads from the environment', () => {
     }
   });
 
-  it("uses the project's production domain from Vercel, or grantgate.vercel.app", () => {
-    assert.equal(DEFAULT_ORIGIN, 'https://grantgate.vercel.app');
+  it("uses the project's production domain from Vercel, or the Cloudflare Worker's", () => {
+    assert.equal(DEFAULT_ORIGIN, 'https://grantgate.1426davejobs.workers.dev');
     assert.equal(siteOrigin({}), DEFAULT_ORIGIN);
     assert.equal(siteOrigin({ VERCEL_PROJECT_PRODUCTION_URL: 'grantgate.example' }), 'https://grantgate.example');
     assert.equal(siteOrigin({ VERCEL_PROJECT_PRODUCTION_URL: 'GrantGate-x1.vercel.app' }), 'https://grantgate-x1.vercel.app');
@@ -216,8 +216,12 @@ describe('buildConfig: what the build reads from the environment', () => {
     }
   });
 
-  it("bakes in VERCEL_ENV, and anything that isn't a plain word counts as development", () => {
+  it("bakes in NEXT_PUBLIC_DEPLOY_ENV or VERCEL_ENV, and anything that isn't a plain word counts as development", () => {
     assert.equal(buildConfig({}).deployment, 'development');
+    // The Cloudflare build (npm run cf:build) is production, whatever Vercel's variable says.
+    assert.equal(buildConfig({ NEXT_PUBLIC_DEPLOY_ENV: 'production' }).deployment, 'production');
+    assert.equal(buildConfig({ NEXT_PUBLIC_DEPLOY_ENV: 'production', VERCEL_ENV: 'preview' }).deployment, 'production');
+    assert.equal(buildConfig({ NEXT_PUBLIC_DEPLOY_ENV: '"><script>' }).deployment, 'development');
     assert.equal(buildConfig({ VERCEL_ENV: 'production' }).deployment, 'production');
     assert.equal(buildConfig({ VERCEL_ENV: 'preview' }).deployment, 'preview');
     assert.equal(buildConfig({ VERCEL_ENV: '"><script>' }).deployment, 'development');

@@ -12,8 +12,11 @@ export const NETWORK_ERROR = "grantgate couldn't be reached. Check your connecti
 export const UNEXPECTED_REPLY = 'Something went wrong on our side. Please try again in a minute.';
 export const CHECKOUT_SOON = "Checkout opens soon. Join the waitlist below and you'll hear first.";
 
-/** The <meta name> the build writes VERCEL_ENV into (scripts/site-pages.ts). */
-export const DEPLOYMENT_META = 'vercel-env';
+/**
+ * The <meta name> the build writes the deploy env into (scripts/site-pages.ts): NEXT_PUBLIC_DEPLOY_ENV from
+ * `npm run cf:build` on the Cloudflare Worker, else Vercel's VERCEL_ENV.
+ */
+export const DEPLOYMENT_META = 'deploy-env';
 export const SIGNAL_URL = 'https://idea-factory.1426davejobs.workers.dev/api/ideas/signal';
 export const SIGNAL_SLUG = 'grantgate';
 /** Set (to anything) in the owner's browser so their own visits aren't counted. */
@@ -30,7 +33,7 @@ export type SignalKind = 'visit' | 'activate' | 'checkout';
 export type KeyValueStore = Pick<Storage, 'getItem' | 'setItem'>;
 
 export interface SignalEnv {
-  /** The deployment the page was built for (<meta name="vercel-env">); only "production" counts. */
+  /** The deployment the page was built for (<meta name="deploy-env">); only "production" counts. */
   deployment: string | null;
   /** navigator.webdriver: true for automated browsers. */
   webdriver: boolean;

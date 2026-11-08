@@ -146,7 +146,7 @@ describe('npm run site: the local server', () => {
 
   it('serves robots.txt and sitemap.xml at the root, where crawlers look', async () => {
     const robots = await (await fetch(`${base}/robots.txt`)).text();
-    assert.match(robots, /^Sitemap: https:\/\/grantgate\.vercel\.app\/sitemap\.xml$/m);
+    assert.match(robots, /^Sitemap: https:\/\/grantgate\.1426davejobs\.workers\.dev\/sitemap\.xml$/m);
     const sitemap = await (await fetch(`${base}/sitemap.xml`)).text();
     assert.equal([...sitemap.matchAll(/<loc>/g)].length, PUBLIC_PAGES.length);
   });

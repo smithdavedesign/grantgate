@@ -1,0 +1,21 @@
+// grantgate's landing page on Cloudflare Workers (free plan). `npm run cf:build` writes the static files to
+// .cloudflare/assets (the same pages as the Vercel build, counted as production, plus _headers with the CSP); wrangler
+// bundles src/site/worker.ts, which answers /api/waitlist and /api/checkout. Vercel ignores this file. Deploy with
+// the credential broker, which injects the token:
+//   provision cloudflare deploy grantgate <this checkout>
+// Secrets (Worker secrets, never in this file): DATABASE_URL, and STRIPE_PAYMENT_LINK once checkout opens:
+//   provision cloudflare secret grantgate <KEY>
+{
+  "name": "grantgate",
+  "main": "src/site/worker.ts",
+  "compatibility_date": "2026-10-15",
+  "assets": {
+    "directory": ".cloudflare/assets",
+    "binding": "ASSETS",
+    // /privacy → privacy.html, like the Vercel routes; paths with no file (/api/*) go to the Worker.
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "none"
+  },
+  "workers_dev": true,
+  "observability": { "enabled": true }
+}

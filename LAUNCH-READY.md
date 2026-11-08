@@ -52,7 +52,7 @@ Date: 2026-10-26. This pass makes the website ready for a public launch. What gr
    - **referrer** is `document.referrer` only when its origin differs from `location.origin`; otherwise it's `null`.
    - **When nothing is sent:**
      - when `navigator.webdriver` is true;
-     - when the build wasn't production (the build writes `VERCEL_ENV` into `<meta name="vercel-env">`, so local runs, previews and screenshot runs count as non-production);
+     - when the build wasn't production (the build writes the deploy env into `<meta name="deploy-env">`: `NEXT_PUBLIC_DEPLOY_ENV` from `npm run cf:build` on the Cloudflare Worker, else Vercel's `VERCEL_ENV`; so local runs, previews and screenshot runs count as non-production);
      - when localStorage `repohq:notrack` is set;
      - when storage can't be read or written.
    - **CSP:** `connect-src` now allows `https://idea-factory.1426davejobs.workers.dev` as well as the site itself. Nothing else in the CSP changed.
@@ -75,8 +75,8 @@ Date: 2026-10-26. This pass makes the website ready for a public launch. What gr
 |---|---|---|
 | $5/month (the site) or $49/year (REVENUE.md)? | **$49/year**, on the page, in the terms and in the JSON-LD. | REVENUE.md is newer and the brief asks for it. The price changed; the product didn't. |
 | Clean URLs | `/privacy` and `/terms` are rewrites to the `.html` files, and the old addresses 308 there. The local server follows the same routes table. | The brief names `/privacy` and `/terms`, and old links keep working. |
-| Which domain do canonical URLs use? | `VERCEL_PROJECT_PRODUCTION_URL` (Vercel sets it at build time, to the custom domain if there is one). Otherwise `https://grantgate.vercel.app`. | A custom domain then needs no code change. Preview builds still point at production. |
-| How does the browser know it's production? | The build writes `VERCEL_ENV` into `<meta name="vercel-env">`. Only `production` is counted. | It's static HTML with a strict CSP (no inline script), so build-time is the only time to know. It's the same idea as `NEXT_PUBLIC_VERCEL_ENV`. |
+| Which domain do canonical URLs use? | `VERCEL_PROJECT_PRODUCTION_URL` (Vercel sets it at build time, to the custom domain if there is one). Otherwise the Cloudflare Worker, `https://grantgate.1426davejobs.workers.dev` (2026-11-08; it was `https://grantgate.vercel.app`). | A custom domain then needs no code change. Preview builds still point at production. |
+| How does the browser know it's production? | The build writes `NEXT_PUBLIC_DEPLOY_ENV` (`npm run cf:build` sets `production`), else `VERCEL_ENV`, into `<meta name="deploy-env">`. Only `production` is counted. | It's static HTML with a strict CSP (no inline script), so build-time is the only time to know. It's the same idea as `NEXT_PUBLIC_VERCEL_ENV`. |
 | How is the payment link read? | `STRIPE_PAYMENT_LINK` at **build** time; the button is left out if it's missing. Changing it needs a redeploy. | Static pages; no endpoint to fetch config from. Vercel needs a redeploy for env changes anyway. |
 | Keep `/api/checkout`? | Yes, now reading `STRIPE_PAYMENT_LINK`. `CHECKOUT_URL` is no longer read. | Removing a route is a bigger change than this pass needs, and one variable name is less confusing than two. `CHECKOUT_URL` was never set, because the Stripe link didn't exist yet. |
 | Beacon `Content-Type` | The body is JSON, labelled `text/plain;charset=UTF-8`. | A CORS-simple request has no preflight. It arrives even if RepoHQ doesn't answer `OPTIONS`, and keepalive works in every browser. RepoHQ must parse the body as JSON whatever the header says (`req.json()` does). |
@@ -101,10 +101,10 @@ Then:
 
 **After deploying:**
 1. View the source of the live home page. It should have:
-   - `<meta name="vercel-env" content="production">`;
+   - `<meta name="deploy-env" content="production">`;
    - the canonical URL on the production domain.
 
-   If it says `development`, the project has "Automatically expose System Environment Variables" turned off. Turn it on and redeploy, or no visits will be counted.
+   On the Cloudflare Worker, `npm run cf:build` writes `production`. On Vercel, if it says `development`, the project has "Automatically expose System Environment Variables" turned off. Turn it on and redeploy, or no visits will be counted.
 2. Open `/robots.txt`, `/sitemap.xml` and `/og.png`. Paste the home URL into a share-card previewer (for example, LinkedIn's Post Inspector or the Twitter/X card preview) and check the image and title.
 3. Paste the home URL into Google's Rich Results Test and check that the SoftwareApplication is read.
 4. In a normal browser window, open the site, then DevTools › Network:
@@ -115,15 +115,15 @@ Then:
 
    Then run `localStorage.setItem('repohq:notrack', '1')` in the console: nothing more is sent from that browser. Do this in your own browser so your visits aren't counted.
 5. **Check RepoHQ's side:** the visits show up for `grantgate`. If none do, the endpoint may not accept a `text/plain` body; see "Remaining risks".
-6. **The waitlist still saves sign-ups.** Join with a test address, then remove it on `/privacy`. A 503 means `DATABASE_URL` isn't set in the Vercel project, which M4's `.provision` asked for.
+6. **The waitlist still saves sign-ups.** Join with a test address, then remove it on `/privacy`. A 503 means `DATABASE_URL` isn't set on the Worker: `provision cloudflare secret grantgate DATABASE_URL` (on Vercel, the project env that M4's `.provision` asked for).
 
 ## What's left for David
 
 1. **The Stripe payment link.** `.provision` requests it.
    - Create a $49/year recurring Payment Link in Stripe.
-   - Paste its URL into the Vercel project's env as **`STRIPE_PAYMENT_LINK`** (Production).
-   - Redeploy. The Buy button appears only after a redeploy, because the link is read at build time.
-2. **A custom domain**, if you want one: add it in Vercel and redeploy. Canonical URLs, the sitemap, robots.txt and the share image follow `VERCEL_PROJECT_PRODUCTION_URL`, so no code change is needed.
+   - On the Cloudflare Worker: `provision stripe grantgate … --host cloudflare` sets **`STRIPE_PAYMENT_LINK`** as a Worker secret, which `/api/checkout` reads at once. The Buy button is drawn at build time, so it appears after a `npm run cf:build` with the link in its environment, and a redeploy.
+   - On Vercel: paste its URL into the project's env as **`STRIPE_PAYMENT_LINK`** (Production) and redeploy.
+2. **A custom domain**, if you want one: on the Worker, add it in Cloudflare and change `DEFAULT_ORIGIN` in `scripts/site-pages.ts` (or set `VERCEL_PROJECT_PRODUCTION_URL` for the build). On Vercel, add it there and redeploy: canonical URLs, the sitemap, robots.txt and the share image follow `VERCEL_PROJECT_PRODUCTION_URL`.
 3. **Mark your own browser** with `localStorage.setItem('repohq:notrack', '1')` on the live site.
 4. **Before charging:**
    - give the privacy and terms pages a quick read (they name no jurisdiction);

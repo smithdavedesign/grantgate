@@ -6,7 +6,8 @@
 //   <!-- grantgate:buy -->    the Buy button, linking to STRIPE_PAYMENT_LINK; when that
 //                             isn't set, the waitlist button instead (index.html only)
 //
-// plus robots.txt, sitemap.xml and the Vercel routes that serve /privacy and /terms.
+// plus robots.txt, sitemap.xml and the Vercel routes that serve /privacy and /terms (the Cloudflare Worker serves
+// them through its static assets' auto-trailing-slash).
 // Everything here is decided at build time: the pages stay static files.
 
 import { checkoutTarget, escapeHtml } from '../src/site/api.ts';
@@ -17,8 +18,11 @@ export { DEPLOYMENT_META };
 
 type Env = Readonly<Record<string, string | undefined>>;
 
-/** Where the site lives when Vercel doesn't say: the project's own vercel.app domain. */
-export const DEFAULT_ORIGIN = 'https://grantgate.vercel.app';
+/**
+ * Where the site lives when Vercel doesn't say: the Cloudflare Worker, production since 2026-11-08 (Vercel's account
+ * is blocked; it was grantgate-ashen.vercel.app).
+ */
+export const DEFAULT_ORIGIN = 'https://grantgate.1426davejobs.workers.dev';
 
 export const HEAD_MARKER = '<!-- grantgate:head -->';
 export const BUY_MARKER = '<!-- grantgate:buy -->';
@@ -71,12 +75,13 @@ export interface BuildConfig {
   origin: string;
   /** The Stripe Payment Link, or null to leave the Buy button out. */
   paymentLink: string | null;
-  /** Vercel's VERCEL_ENV: production, preview or development. */
+  /** NEXT_PUBLIC_DEPLOY_ENV (`npm run cf:build` sets production for the Cloudflare Worker), else Vercel's VERCEL_ENV:
+   * production, preview or development. */
   deployment: string;
 }
 
 export function buildConfig(env: Env): BuildConfig {
-  const deployment = env.VERCEL_ENV ?? '';
+  const deployment = env.NEXT_PUBLIC_DEPLOY_ENV || env.VERCEL_ENV || '';
   return {
     origin: siteOrigin(env),
     paymentLink: paymentLink(env),
